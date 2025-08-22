@@ -13,8 +13,9 @@ RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webu
 # Navigate to the frontend directory to run the build
 WORKDIR /app/frontend
 
-# Install dependencies and run the production build. This is the slow, memory-heavy step.
-RUN npm install && npm run build
+# ✅ FIX: Use --legacy-peer-deps to resolve the dependency conflict
+# This is the slow, memory-heavy step.
+RUN npm install --legacy-peer-deps && npm run build
 
 # Go back to the root directory to package the files
 WORKDIR /app
