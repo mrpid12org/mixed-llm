@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v2.2-MERGED-STACK (Definitive Reqs Path Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v2.4-MERGED-STACK (Blackwell Support) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -59,12 +59,12 @@ RUN git clone https://github.com/oobabooga/text-generation-webui.git
 # --- 6. Install All Application Python Dependencies into the venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-# --- FINAL FIX v3: Using the verified, correct, full path to the requirements file ---
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
-RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all" \
+# --- FIX: Added Blackwell (91) architecture for future compatibility ---
+RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=80;86;89;90;91" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
 # --- 8. Install ComfyUI Custom Nodes ---
