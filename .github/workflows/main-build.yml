@@ -15,23 +15,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      # Add your Docker registry login step here if needed
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          # ✅ Updated with your image tag
-          tags: mrpid12/mixed-llm:latest
+          # ✅ FIX: Dynamically create the tag from your Docker Hub secret and GitHub repo name.
+          # This converts "mrpid12org/mixed-llm" to "mrpid12org/mixed-llm" for the tag.
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
           build-args: |
             WEBUI_ARTIFACT_URL=https://github.com/${{ github.repository }}/releases/download/v0.6.23/webui-v0.6.23.tar.gz
