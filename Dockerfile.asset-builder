@@ -4,16 +4,14 @@ FROM node:20-bookworm
 # Install git, which is needed to clone the source repository
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set the working directory to the repository root
 WORKDIR /app
 
 # Clone the specific version of the Open WebUI repository
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
 
-# Navigate to the frontend directory to run the build
-WORKDIR /app/frontend
-
-# ✅ FIX: Apply the --legacy-peer-deps flag to EVERY npm install command.
+# ✅ FIX: Run all npm commands from the project root /app, just like the original Dockerfile.
+# This ensures the build output goes to the correct directory (/app/build).
 RUN npm install --legacy-peer-deps && \
     npm install @tiptap/suggestion --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
@@ -22,14 +20,11 @@ RUN npm install --legacy-peer-deps && \
 # Now, run the production build.
 RUN npm run build
 
-# Go back to the root directory to package the files
-WORKDIR /app
-
 # Create a staging directory to cleanly package our assets
 RUN mkdir -p /release_assets/backend
 
-# Copy the built frontend and the backend source into the staging directory
-RUN cp -R /app/frontend/build /release_assets/
+# ✅ FIX: Copy the frontend from the correct build output directory (/app/build)
+RUN cp -R /app/build /release_assets/
 RUN cp -R /app/backend/* /release_assets/backend/
 
 # Create the final compressed archive in the root of the image
