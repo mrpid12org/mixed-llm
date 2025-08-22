@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.2-MERGED-STACK (TextGenUI Launcher) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.3-MERGED-STACK (JS Deps Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -39,7 +39,10 @@ WORKDIR /app
 # Pinning the version ensures build stability.
 RUN git clone --depth 1 --branch v0.6.18 https://github.com/open-webui/open-webui.git .
 # Use a higher memory limit for the Node.js build process.
+# --- FIX: Added explicit installation of problematic JS dependencies ---
 RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
+    npm install lowlight --legacy-peer-deps && \
+    npm install y-protocols --legacy-peer-deps && \
     npm run build && \
     npm cache clean --force && \
     rm -rf node_modules
@@ -131,11 +134,9 @@ COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /usr/local/bin/download_and_join.sh
-# --- ADDED: Copy the new launcher script ---
 COPY start_textgenui.sh /start_textgenui.sh
 
 # --- 6. Set Permissions ---
-# --- ADDED: Make the new launcher script executable ---
 RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /usr/local/bin/download_and_join.sh /start_textgenui.sh
 
 # --- 7. Expose Ports and Set Entrypoint ---
