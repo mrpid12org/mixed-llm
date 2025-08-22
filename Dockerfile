@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.6-MERGED-STACK (Open WebUI v0.6.23) ---"
+RUN echo "--- DOCK-ERFILE VERSION: v1.7-MERGED-STACK (Tiptap Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -35,9 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 # --- CHANGE: Updated Open WebUI version to v0.6.23 ---
 RUN git clone --depth 1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
+# Use a higher memory limit for the Node.js build process.
+# --- FIX: Added explicit installation for @tiptap/suggestion dependency ---
 RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps && \
+    npm install @tiptap/suggestion --legacy-peer-deps && \
     npm run build && \
     npm cache clean --force && \
     rm -rf node_modules
