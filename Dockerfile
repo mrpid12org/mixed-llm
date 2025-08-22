@@ -4,25 +4,33 @@
 FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.0-MERGED-STACK ---"
+RUN echo "--- DOCKERFILE VERSION: v1.1-MERGED-STACK (Node.js Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PYTHON_VERSION=3.11
 
 # --- 1. Install System Build Dependencies ---
-# Install all build tools in a single layer to optimize caching.
+# This layer now includes the setup for NodeSource to install a modern Node.js version.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     build-essential \
     aria2 \
-    nodejs \
-    npm \
+    ca-certificates \
+    gnupg \
     python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev \
     python${PYTHON_VERSION}-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
+    # --- FIX: Setup NodeSource repository for Node.js 20.x ---
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && NODE_MAJOR=20 \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    # --- Now install Node.js from the new source ---
+    && apt-get update \
+    && apt-get install nodejs -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Build Open WebUI Frontend ---
@@ -46,7 +54,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # This version is compiled for CUDA 12.1, which is compatible with our 12.5.1 base.
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
-        torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+        torch==2.3.1 torchvision==0.18.1 toraudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
 
 # --- 5. Clone Application Repositories ---
 WORKDIR /opt
