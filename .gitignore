@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Docker
+.dockerignore
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local environment variables
+.env
+*.env.local
