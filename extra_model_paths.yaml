@@ -1,11 +1,11 @@
 # This file tells ComfyUI where to find models stored in the persistent /workspace volume.
 comfyui:
-  checkpoints: /workspace/comfyui-models/checkpoints
-  unet: /workspace/comfyui-models/unet
-  vae: /workspace/comfyui-models/vae
-  clip: /workspace/comfyui-models/clip
-  loras: /workspace/comfyui-models/loras
-  t5: /workspace/comfyui-models/t5
-  controlnet: /workspace/comfyui-models/controlnet
-  embeddings: /workspace/comfyui-models/embeddings
-  hypernetworks: /workspace/comfyui-models/hypernetworks
+  checkpoints: /workspace/comfyui/checkpoints
+  unet: /workspace/comfyui/unet
+  vae: /workspace/comfyui/vae
+  clip: /workspace/comfyui/clip
+  loras: /workspace/comfyui/loras
+  t5: /workspace/comfyui/t5
+  controlnet: /workspace/comfyui/controlnet
+  embeddings: /workspace/comfyui/embeddings
+  hypernetworks: /workspace/comfyui/hypernetworks
