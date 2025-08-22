@@ -49,7 +49,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # --- 4. Install Core Python ML & AI Libraries ---
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
-        torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # --- 5. Clone Application Repositories ---
 WORKDIR /opt
@@ -63,13 +63,14 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python using the proven parent build method ---
-ARG TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0"
+ARG TORCH_CUDA_ARCH_LIST="8.9;9.0;10.0"
 RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
 # --- 8. Install ComfyUI Custom Nodes ---
-RUN cd /opt/ComfyUI/custom_nodes && \
+RUN \
+    cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
     python3 -m pip install --no-cache-dir -r requirements.txt
@@ -127,4 +128,15 @@ RUN mkdir -p /workspace/logs \
              ${TEXTGEN_DATA_DIR}
 
 # --- 5. Copy Local Config Files and Scripts ---
-COPY supervisord
+COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
+COPY entrypoint.sh /entrypoint.sh
+COPY sync_models.sh /sync_models.sh
+COPY idle_shutdown.sh /idle_shutdown.sh
+COPY start_textgenui.sh /start_textgenui.sh
+COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
+COPY download_and_join.sh /usr/local/bin/download_and_join.sh
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /usr/local/bin/download_and_join.sh
+
+# --- 6. Expose ports and set entrypoint ---
+EXPOSE 8080 8188 7860
+ENTRYPOINT ["/entrypoint.sh"]
