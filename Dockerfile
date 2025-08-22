@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.1-MERGED-STACK (Node.js Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.2-MERGED-STACK (TextGenUI Launcher) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -54,7 +54,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # This version is compiled for CUDA 12.1, which is compatible with our 12.5.1 base.
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
-        torch==2.3.1 torchvision==0.18.1 toraudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+        torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
 
 # --- 5. Clone Application Repositories ---
 WORKDIR /opt
@@ -131,9 +131,12 @@ COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /usr/local/bin/download_and_join.sh
+# --- ADDED: Copy the new launcher script ---
+COPY start_textgenui.sh /start_textgenui.sh
 
 # --- 6. Set Permissions ---
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /usr/local/bin/download_and_join.sh
+# --- ADDED: Make the new launcher script executable ---
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /usr/local/bin/download_and_join.sh /start_textgenui.sh
 
 # --- 7. Expose Ports and Set Entrypoint ---
 EXPOSE 8080 8188 7860 11434
