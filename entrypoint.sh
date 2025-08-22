@@ -28,16 +28,12 @@ echo "--- ComfyUI model paths configured. ---"
 # --- 3. Text-Generation-WebUI Persistent Data Setup (from parent build) ---
 TEXTGEN_APP_DIR="/opt/text-generation-webui"
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
-# List of directories to be persisted
 TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets prompts training"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
-    # If a directory exists in the app folder and is NOT a symlink, remove it.
     if [ -d "${TEXTGEN_APP_DIR}/${dir}" ] && [ ! -L "${TEXTGEN_APP_DIR}/${dir}" ]; then
         rm -rf "${TEXTGEN_APP_DIR}/${dir}"
     fi
-    # Create the corresponding directory in persistent storage
     mkdir -p "${TEXTGEN_DATA_DIR}/${dir}"
-    # Create the symbolic link from the app folder to the persistent folder
     ln -sf "${TEXTGEN_DATA_DIR}/${dir}" "${TEXTGEN_APP_DIR}/${dir}"
 done
 echo "--- Text-Generation-WebUI persistence configured. ---"
