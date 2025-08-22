@@ -1,46 +1,47 @@
 name: Create Open WebUI Release Asset
 
+# This allows you to run the workflow manually from the GitHub Actions tab
 on:
-  workflow_dispatch: # Allows you to run this manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  create-asset:
-    # ⚠️ Use the powerful runner for this one-time job
-    runs-on: ubuntu-latest-16-cores 
+  build-and-release-asset:
+    name: Build and Release WebUI Artifact
+    # ⚠️ This job MUST run on a powerful runner to handle the npm build
+    runs-on: ubuntu-latest-16-cores
 
     steps:
-      - name: Check out Open WebUI source code
+      - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the asset-builder image
+        uses: docker/build-push-action@v5
         with:
-          repository: open-webui/open-webui
-          ref: 'v0.6.23' # Pin to the exact version you need
+          context: .
+          # This explicitly tells Docker to use your asset builder file
+          file: ./Dockerfile.asset-builder
+          # We don't push this image, we just load it locally to extract the file
+          load: true
+          tags: open-webui-asset-builder:latest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build the frontend
+      - name: Extract artifact from the builder image
         run: |
-          cd frontend
-          npm install
-          npm run build
+          # Create a temporary container from the image we just built
+          CONTAINER_ID=$(docker create open-webui-asset-builder:latest)
+          # Copy the finished archive from the container to the runner's workspace
+          docker cp "${CONTAINER_ID}:/webui-v0.6.23.tar.gz" .
+          # Clean up the temporary container
+          docker rm -v "${CONTAINER_ID}"
 
-      - name: Package the artifact
-        run: |
-          # Create a directory to hold the assets
-          mkdir -p release_assets/backend
-          # Copy the built frontend and the backend into it
-          cp -R frontend/build release_assets/
-          cp -R backend/* release_assets/backend/
-          # Create the compressed archive
-          tar -czvf webui-v0.6.23.tar.gz -C release_assets .
-
-      - name: Create Release and Upload Asset
+      - name: Create GitHub Release and Upload Asset
         env:
+          # The GITHUB_TOKEN is automatically provided by GitHub Actions
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create v0.6.23 \
             --title "Open WebUI v0.6.23 Pre-built Artifact" \
-            --notes "Contains pre-built frontend and backend files for Docker builds." \
+            --notes "Contains pre-built frontend and backend files for the main Docker build." \
             webui-v0.6.23.tar.gz
