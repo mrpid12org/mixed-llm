@@ -12,7 +12,7 @@ jobs:
   build-and-push:
     name: Build and Push Main Image
     # ✅ This job runs on the standard, cheap runner
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out repository
