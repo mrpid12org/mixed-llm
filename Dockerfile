@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCK-ERFILE VERSION: v1.7-MERGED-STACK (Tiptap Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.8-MERGED-STACK (Memory Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -33,11 +33,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- 2. Build Open WebUI Frontend ---
 WORKDIR /app
-# --- CHANGE: Updated Open WebUI version to v0.6.23 ---
 RUN git clone --depth 1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-# Use a higher memory limit for the Node.js build process.
-# --- FIX: Added explicit installation for @tiptap/suggestion dependency ---
-RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
+# --- FIX: Increased Node.js memory limit from 8GB to 16GB ---
+RUN NODE_OPTIONS="--max-old-space-size=16384" npm install --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps && \
     npm install @tiptap/suggestion --legacy-peer-deps && \
@@ -66,7 +64,6 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
-# This ensures optimal performance for GGUF models in Text-Generation-WebUI.
 RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
