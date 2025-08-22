@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.8-MERGED-STACK (Memory Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.9-MERGED-STACK (Requirements Path Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -34,7 +34,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- 2. Build Open WebUI Frontend ---
 WORKDIR /app
 RUN git clone --depth 1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-# --- FIX: Increased Node.js memory limit from 8GB to 16GB ---
 RUN NODE_OPTIONS="--max-old-space-size=16384" npm install --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps && \
@@ -60,7 +59,8 @@ RUN git clone https://github.com/oobabooga/text-generation-webui.git
 # --- 6. Install All Application Python Dependencies into the venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements.txt
+# --- FIX: Using the correct, specific requirements file for text-gen-ui ---
+RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements_cuda128.txt
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
