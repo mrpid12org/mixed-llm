@@ -1,17 +1,14 @@
 name: Main Docker Build and Push
 
-# This workflow runs automatically on pushes to your main branch
 on:
   push:
     branches:
       - main
-  # Also allow manual runs
   workflow_dispatch:
 
 jobs:
   build-and-push:
     name: Build and Push Main Image
-    # ✅ This job runs on the standard, cheap runner
     runs-on: self-hosted
 
     steps:
@@ -32,11 +29,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          # Use the main, lightweight Dockerfile
           file: ./Dockerfile
           push: true
-          tags: YOUR_USERNAME/YOUR_IMAGE_NAME:latest
-          # ⭐️ THIS IS THE FIX ⭐️
-          # This injects the URL into the WEBUI_ARTIFACT_URL variable in the Dockerfile
+          # ✅ Updated with your image tag
+          tags: mrpid12/mixed-llm:latest
           build-args: |
             WEBUI_ARTIFACT_URL=https://github.com/${{ github.repository }}/releases/download/v0.6.23/webui-v0.6.23.tar.gz
