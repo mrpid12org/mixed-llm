@@ -4,14 +4,13 @@
 FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.3-MERGED-STACK (JS Deps Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.4-MERGED-STACK (llama-cpp fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PYTHON_VERSION=3.11
 
 # --- 1. Install System Build Dependencies ---
-# This layer now includes the setup for NodeSource to install a modern Node.js version.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -19,27 +18,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     aria2 \
     ca-certificates \
     gnupg \
+    cmake \
     python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev \
     python${PYTHON_VERSION}-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
-    # --- FIX: Setup NodeSource repository for Node.js 20.x ---
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && NODE_MAJOR=20 \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    # --- Now install Node.js from the new source ---
     && apt-get update \
     && apt-get install nodejs -y \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Build Open WebUI Frontend ---
-# This is done in the builder stage so the final image doesn't need Node.js.
 WORKDIR /app
-# Pinning the version ensures build stability.
 RUN git clone --depth 1 --branch v0.6.18 https://github.com/open-webui/open-webui.git .
-# Use a higher memory limit for the Node.js build process.
-# --- FIX: Added explicit installation of problematic JS dependencies ---
 RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps && \
@@ -48,13 +42,10 @@ RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
     rm -rf node_modules
 
 # --- 3. Prepare Unified Python Virtual Environment ---
-# A single venv is crucial for managing dependencies from all three apps.
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # --- 4. Install Core Python ML & AI Libraries ---
-# Install PyTorch first, as it's the largest and most complex dependency.
-# This version is compiled for CUDA 12.1, which is compatible with our 12.5.1 base.
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
         torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
@@ -65,15 +56,17 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 RUN git clone https://github.com/oobabooga/text-generation-webui.git
 
 # --- 6. Install All Application Python Dependencies into the venv ---
-# We install all requirements files into the same venv. If there are major
-# conflicts, the build will fail here, telling us exactly what needs to be fixed.
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements.txt
-# Install common backends for text-generation-webui
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
-# --- 7. Install ComfyUI Custom Nodes ---
+# --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
+# This ensures optimal performance for GGUF models in Text-Generation-WebUI.
+RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all" \
+    python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
+
+# --- 8. Install ComfyUI Custom Nodes ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
