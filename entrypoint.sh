@@ -6,37 +6,43 @@ mkdir -p /workspace/logs
 rm -f /workspace/logs/*
 
 # --- 1. Open WebUI Persistent Data Setup ---
-WEBUI_DATA_DIR="/app/backend/data"
-PERSISTENT_WEBUI_DIR="/workspace/webui-data"
-echo "--- Ensuring Open WebUI data is persistent... ---"
-mkdir -p "$PERSISTENT_WEBUI_DIR"
-if [ -d "$WEBUI_DATA_DIR" ] && [ ! -L "$WEBUI_DATA_DIR" ]; then
+WEBUI_INTERNAL_DATA_DIR="/app/backend/data"
+echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
+mkdir -p "${OPENWEBUI_DATA_DIR}"
+if [ -d "$WEBUI_INTERNAL_DATA_DIR" ] && [ ! -L "$WEBUI_INTERNAL_DATA_DIR" ]; then
   echo "First run detected for Open WebUI. Migrating default data..."
-  # Use rsync to handle cases where the destination already has some files.
-  rsync -a "$WEBUI_DATA_DIR/" "$PERSISTENT_WEBUI_DIR/"
-  rm -rf "$WEBUI_DATA_DIR"
+  rsync -a "$WEBUI_INTERNAL_DATA_DIR/" "${OPENWEBUI_DATA_DIR}/"
+  rm -rf "$WEBUI_INTERNAL_DATA_DIR"
 fi
-if [ ! -L "$WEBUI_DATA_DIR" ]; then
-  echo "Linking $PERSISTENT_WEBUI_DIR to $WEBUI_DATA_DIR..."
-  ln -s "$PERSISTENT_WEBUI_DIR" "$WEBUI_DATA_DIR"
+if [ ! -L "$WEBUI_INTERNAL_DATA_DIR" ]; then
+  ln -s "${OPENWEBUI_DATA_DIR}" "$WEBUI_INTERNAL_DATA_DIR"
 fi
 echo "--- Open WebUI persistence configured. ---"
 
 # --- 2. ComfyUI Model Path Setup ---
 COMFYUI_MODEL_PATHS_FILE="/opt/ComfyUI/extra_model_paths.yaml"
-PERSISTENT_COMFYUI_PATHS_FILE="${COMFYUI_MODELS_DIR}/extra_model_paths.yaml"
-echo "--- Ensuring ComfyUI model paths are persistent... ---"
-mkdir -p "$COMFYUI_MODELS_DIR"
-if [ ! -f "$PERSISTENT_COMFYUI_PATHS_FILE" ]; then
-    echo "Copying default model paths config for ComfyUI..."
-    cp /etc/comfyui_model_paths.yaml "$PERSISTENT_COMFYUI_PATHS_FILE"
-fi
-# Always link the persistent config into the ComfyUI directory
-ln -sf "$PERSISTENT_COMFYUI_PATHS_FILE" "$COMFYUI_MODEL_PATHS_FILE"
+echo "--- Ensuring ComfyUI is using the correct model path config... ---"
+ln -sf /etc/comfyui_model_paths.yaml "$COMFYUI_MODEL_PATHS_FILE"
 echo "--- ComfyUI model paths configured. ---"
 
+# --- 3. Text-Generation-WebUI Persistent Data Setup (from parent build) ---
+TEXTGEN_APP_DIR="/opt/text-generation-webui"
+echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
+# List of directories to be persisted
+TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets prompts training"
+for dir in $TEXTGEN_DIRS_TO_PERSIST; do
+    # If a directory exists in the app folder and is NOT a symlink, remove it.
+    if [ -d "${TEXTGEN_APP_DIR}/${dir}" ] && [ ! -L "${TEXTGEN_APP_DIR}/${dir}" ]; then
+        rm -rf "${TEXTGEN_APP_DIR}/${dir}"
+    fi
+    # Create the corresponding directory in persistent storage
+    mkdir -p "${TEXTGEN_DATA_DIR}/${dir}"
+    # Create the symbolic link from the app folder to the persistent folder
+    ln -sf "${TEXTGEN_DATA_DIR}/${dir}" "${TEXTGEN_APP_DIR}/${dir}"
+done
+echo "--- Text-Generation-WebUI persistence configured. ---"
 
-# --- 3. Start All Services via Supervisor ---
+# --- 4. Start All Services via Supervisor ---
 SUPERVISOR_CONF="/etc/supervisor/conf.d/all-services.conf"
 if [ ! -f "$SUPERVISOR_CONF" ]; then
     echo "--- FATAL ERROR: Supervisor configuration file not found at $SUPERVISOR_CONF ---"
