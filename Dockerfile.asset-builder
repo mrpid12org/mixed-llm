@@ -1,0 +1,33 @@
+# Use an official Node.js image as the base. Version 20 is standard.
+FROM node:20-bookworm
+
+# Install git, which is needed to clone the source repository
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Clone the specific version of the Open WebUI repository
+RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
+
+# Navigate to the frontend directory to run the build
+WORKDIR /app/frontend
+
+# Install dependencies and run the production build. This is the slow, memory-heavy step.
+RUN npm install && npm run build
+
+# Go back to the root directory to package the files
+WORKDIR /app
+
+# Create a staging directory to cleanly package our assets
+RUN mkdir -p /release_assets/backend
+
+# Copy the built frontend and the backend source into the staging directory
+RUN cp -R /app/frontend/build /release_assets/
+RUN cp -R /app/backend/* /release_assets/backend/
+
+# Create the final compressed archive in the root of the image
+RUN tar -czvf /webui-v0.6.23.tar.gz -C /release_assets .
+
+# A simple command to indicate the build is done.
+CMD ["echo", "Asset build complete. The artifact is available at /webui-v0.6.23.tar.gz"]
