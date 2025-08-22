@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.5-MERGED-STACK (CUDA 12.8.1 Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.6-MERGED-STACK (Open WebUI v0.6.23) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -33,7 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- 2. Build Open WebUI Frontend ---
 WORKDIR /app
-RUN git clone --depth 1 --branch v0.6.18 https://github.com/open-webui/open-webui.git .
+# --- CHANGE: Updated Open WebUI version to v0.6.23 ---
+RUN git clone --depth 1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
 RUN NODE_OPTIONS="--max-old-space-size=8192" npm install --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps && \
@@ -46,7 +47,6 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # --- 4. Install Core Python ML & AI Libraries ---
-# --- FIX: Using PyTorch wheel for CUDA 12.8 ---
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
         torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
@@ -63,6 +63,7 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
+# This ensures optimal performance for GGUF models in Text-Generation-WebUI.
 RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
