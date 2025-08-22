@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v2.9-MERGED-STACK (Final Cleanup) ---"
+RUN echo "--- DOCKERFILE VERSION: v3.0-MERGED-STACK (Linker Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -63,6 +63,8 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python using the proven parent build method ---
+# FIX: Create a symbolic link to libcuda.so.1 to resolve linker errors.
+RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so.1
 ARG TORCH_CUDA_ARCH_LIST="8.9;9.0;10.0"
 RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
