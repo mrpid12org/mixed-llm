@@ -1,10 +1,10 @@
 # =====================================================================================
 # STAGE 1: The Builder - Installs all dependencies and builds applications
 # =====================================================================================
-FROM nvidia/cuda:12.5.1-devel-ubuntu22.04 AS builder
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.4-MERGED-STACK (llama-cpp fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v1.5-MERGED-STACK (CUDA 12.8.1 Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -46,9 +46,10 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # --- 4. Install Core Python ML & AI Libraries ---
+# --- FIX: Using PyTorch wheel for CUDA 12.8 ---
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
-        torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+        torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # --- 5. Clone Application Repositories ---
 WORKDIR /opt
@@ -62,7 +63,6 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
-# This ensures optimal performance for GGUF models in Text-Generation-WebUI.
 RUN CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
@@ -75,7 +75,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 # =====================================================================================
 # STAGE 2: The Final Image - Lean and optimized for production
 # =====================================================================================
-FROM nvidia/cuda:12.5.1-base-ubuntu22.04
+FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 
 # --- Set all environment variables ---
 ENV DEBIAN_FRONTEND=noninteractive
@@ -87,8 +87,8 @@ ENV OLLAMA_MODELS=/workspace/ollama-models
 ENV COMFYUI_MODELS_DIR=/workspace/comfyui-models
 ENV TEXTGEN_MODELS_DIR=/workspace/textgen-models
 # Make apps aware of each other
-ENV COMFYUI_URL="http://127.0.0.1:8188"
-ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
+ENV COMFYUI_URL="http://12_7_0_0_1:8188"
+ENV OLLAMA_BASE_URL="http://12_7_0_0_1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
