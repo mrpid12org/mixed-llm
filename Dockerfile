@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v1.9-MERGED-STACK (Requirements Path Fix) ---"
+RUN echo "--- DOCKERFILE VERSION: v2.0-MERGED-STACK (Final Reqs Path Fix) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -59,8 +59,8 @@ RUN git clone https://github.com/oobabooga/text-generation-webui.git
 # --- 6. Install All Application Python Dependencies into the venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-# --- FIX: Using the correct, specific requirements file for text-gen-ui ---
-RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements_cuda128.txt
+# --- FINAL FIX: Using the new, correct requirements file path for text-gen-ui ---
+RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements.txt
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python with CUDA support ---
