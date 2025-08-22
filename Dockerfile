@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v2.9-MERGED-STACK (Final Persistence) ---"
+RUN echo "--- DOCKERFILE VERSION: v2.9-MERGED-STACK (Final Cleanup) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -89,9 +89,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV OLLAMA_MODELS=/workspace/ollama
 ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
-# --- CHANGE: Set the base persistent directory for Text-Gen-WebUI ---
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
-# This specific var is still needed for the sync script and launcher
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
 
 # Make apps aware of each other
@@ -129,17 +127,4 @@ RUN mkdir -p /workspace/logs \
              ${TEXTGEN_DATA_DIR}
 
 # --- 5. Copy Local Config Files and Scripts ---
-COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
-COPY entrypoint.sh /entrypoint.sh
-COPY sync_models.sh /sync_models.sh
-COPY idle_shutdown.sh /idle_shutdown.sh
-COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
-COPY download_and_join.sh /usr/local/bin/download_and_join.sh
-COPY start_textgenui.sh /start_textgenui.sh
-
-# --- 6. Set Permissions ---
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /usr/local/bin/download_and_join.sh /start_textgenui.sh
-
-# --- 7. Expose Ports and Set Entrypoint ---
-EXPOSE 8080 8188 7860 11434
-ENTRYPOINT ["/entrypoint.sh"]
+COPY supervisord
