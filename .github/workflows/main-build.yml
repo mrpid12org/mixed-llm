@@ -30,8 +30,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # ✅ FIX: Dynamically create the tag from your Docker Hub secret and GitHub repo name.
-          # This converts "mrpid12org/mixed-llm" to "mrpid12org/mixed-llm" for the tag.
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
+          # ✅ FIX: This now matches your actual Docker Hub repository name.
+          tags: sjpgwh/mixed-llm:latest
           build-args: |
             WEBUI_ARTIFACT_URL=https://github.com/${{ github.repository }}/releases/download/v0.6.23/webui-v0.6.23.tar.gz
