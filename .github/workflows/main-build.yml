@@ -1,0 +1,42 @@
+name: Main Docker Build and Push
+
+# This workflow runs automatically on pushes to your main branch
+on:
+  push:
+    branches:
+      - main
+  # Also allow manual runs
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    name: Build and Push Main Image
+    # ✅ This job runs on the standard, cheap runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Add your Docker registry login step here if needed
+      # - name: Log in to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # Use the main, lightweight Dockerfile
+          file: ./Dockerfile
+          push: true
+          tags: YOUR_USERNAME/YOUR_IMAGE_NAME:latest
+          # ⭐️ THIS IS THE FIX ⭐️
+          # This injects the URL into the WEBUI_ARTIFACT_URL variable in the Dockerfile
+          build-args: |
+            WEBUI_ARTIFACT_URL=https://github.com/${{ github.repository }}/releases/download/v0.6.23/webui-v0.6.23.tar.gz
