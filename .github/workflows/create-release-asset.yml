@@ -8,6 +8,10 @@ jobs:
     name: Build and Release WebUI Artifact
     runs-on: self-hosted
 
+    # ✅ FIX: Grant the job write permissions for repository contents
+    permissions:
+      contents: write
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -29,7 +33,6 @@ jobs:
           docker cp "${CONTAINER_ID}:/webui-v0.6.23.tar.gz" .
           docker rm -v "${CONTAINER_ID}"
 
-      # ✅ FIX: Install the GitHub CLI on the self-hosted runner
       - name: Install GitHub CLI
         run: |
           type -p curl >/dev/null || (sudo apt-get update && sudo apt-get install curl -y)
