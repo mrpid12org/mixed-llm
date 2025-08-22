@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v2.8-MERGED-STACK (Parent Build Tactic) ---"
+RUN echo "--- DOCKERFILE VERSION: v2.9-MERGED-STACK (Final Persistence) ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -63,7 +63,6 @@ RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirem
 RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
 
 # --- 7. TACTIC: Recompile llama-cpp-python using the proven parent build method ---
-# This sets the specific torch arch list from the parent build, which relies on forward compatibility for Blackwell.
 ARG TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0"
 RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
@@ -90,7 +89,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV OLLAMA_MODELS=/workspace/ollama
 ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
-ENV TEXTGEN_MODELS_DIR=/workspace/text-generation-webui/models
+# --- CHANGE: Set the base persistent directory for Text-Gen-WebUI ---
+ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
+# This specific var is still needed for the sync script and launcher
+ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
 
 # Make apps aware of each other
 ENV COMFYUI_URL="http://127.0.0.1:8188"
@@ -124,7 +126,7 @@ RUN mkdir -p /workspace/logs \
              ${OLLAMA_MODELS} \
              ${COMFYUI_MODELS_DIR} \
              ${OPENWEBUI_DATA_DIR} \
-             ${TEXTGEN_MODELS_DIR}
+             ${TEXTGEN_DATA_DIR}
 
 # --- 5. Copy Local Config Files and Scripts ---
 COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
