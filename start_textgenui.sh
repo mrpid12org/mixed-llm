@@ -1,17 +1,20 @@
 #!/bin/bash
-# SCRIPT V2 - Uses a robust bash array for command arguments, inspired by the original run.sh.
-# This script reads environment variables and uses them to launch text-generation-webui with the correct flags.
+# SCRIPT V3 - Activates the correct Conda environment before launch.
+
+# --- 1. Activate Conda Environment ---
+# This is the critical missing step. It sets up the correct Python and libraries.
+source /opt/conda/etc/profile.d/conda.sh
+conda activate /opt/conda/envs/textgen
 
 cd /opt/text-generation-webui
 
-# --- 1. Build Argument Array ---
-# This is a safer way to build commands, especially if variables contain spaces.
+# --- 2. Build Argument Array ---
 CMD_ARGS=()
 
-# --- 2. Networking and Base Flags ---
+# --- 3. Networking and Base Flags ---
 CMD_ARGS+=(--listen --listen-host 0.0.0.0 --listen-port 7860 --api --now-ui)
 
-# --- 3. Model and LoRA Configuration ---
+# --- 4. Model and LoRA Configuration ---
 CMD_ARGS+=(--models-dir "${TEXTGEN_MODELS_DIR}" --lora-dir "${TEXTGEN_MODELS_DIR}/loras")
 
 if [ -n "$MODEL_NAME" ]; then
@@ -26,22 +29,19 @@ if [ -n "$LORA_NAMES" ]; then
     done
 fi
 
-# --- 4. Optional MoE config ---
+# --- 5. Optional MoE config ---
 if [ -n "$NUM_EXPERTS_PER_TOKEN" ]; then
     CMD_ARGS+=(--num-experts-per-token "$NUM_EXPERTS_PER_TOKEN")
 fi
 
-# --- 5. Feature Flags ---
+# --- 6. Feature Flags ---
 if [[ "$ENABLE_MULTIMODAL" == "true" || "$ENABLE_MULTIMODAL" == "TRUE" ]]; then
     CMD_ARGS+=(--multimodal)
 fi
 
-# The HUGGING_FACE_HUB_TOKEN is automatically read from the environment by the Hugging Face library.
-
 echo "--- Starting Text-Generation-WebUI with arguments: ---"
 printf " %q" "${CMD_ARGS[@]}"
-echo "\n----------------------------------------------------"
+echo -e "\n----------------------------------------------------"
 
-# --- 6. Launch Server ---
-# Using "${CMD_ARGS[@]}" ensures each argument is passed as a separate, correctly-quoted string.
-exec python3 server.py "${CMD_ARGS[@]}"
+# --- 7. Launch Server ---
+exec python server.py "${CMD_ARGS[@]}"
