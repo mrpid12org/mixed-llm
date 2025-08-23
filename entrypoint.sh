@@ -10,6 +10,8 @@ mkdir -p "${OLLAMA_MODELS}"
 mkdir -p "${COMFYUI_MODELS_DIR}"
 mkdir -p "${OPENWEBUI_DATA_DIR}"
 mkdir -p "${TEXTGEN_DATA_DIR}"
+# --- FIX: Added temp_gguf directory creation ---
+mkdir -p "/workspace/temp_gguf"
 
 # --- 1. Open WebUI Persistent Data Setup ---
 echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
@@ -38,7 +40,6 @@ echo "--- ComfyUI persistence configured. ---"
 
 # --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
-# FIX: Added 'mmproj' and other relevant user_data directories
 TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets training mmproj logs instruction-templates"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
     APP_PATH="/opt/text-generation-webui/user_data/${dir}"
@@ -48,7 +49,6 @@ for dir in $TEXTGEN_DIRS_TO_PERSIST; do
         rm -rf "${APP_PATH}"
     fi
     mkdir -p "${WORKSPACE_PATH}"
-    # FIX: Corrected symlink to point into the user_data directory
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- Text-Generation-WebUI persistence configured. ---"
