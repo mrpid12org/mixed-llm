@@ -1,16 +1,18 @@
 #!/bin/bash
-# SCRIPT V2.1 - Uses new, cleaner directory structure.
+# SCRIPT V2.3 - Corrected ollama show format and default model name
 
 # Give the Ollama server time to start up properly.
 sleep 45
 
 # --- Configuration ---
-MODEL_TO_PULL=${OLLAMA_DEFAULT_MODEL:-"hf.co/mlabonne/gemma-3-27b-it-abliterated-GGUF:Q6_K"}
+# FIX: Using a standard, valid Ollama library model name.
+# You can change this to another valid name from ollama.com/library if you wish.
+MODEL_TO_PULL=${OLLAMA_DEFAULT_MODEL:-"phi3:latest"}
 SYMLINK_DIR=${TEXTGEN_MODELS_DIR}
 BLOBS_DIR="${OLLAMA_MODELS}/blobs"
 
 echo "====================================================================="
-echo "--- Starting Model Sync Script (v2.1) ---"
+echo "--- Starting Model Sync Script (v2.3) ---"
 echo "====================================================================="
 
 # --- 1. PULL DEFAULT OLLAMA MODEL ---
@@ -47,7 +49,8 @@ ollama list | awk '{print $1}' | tail -n +2 | while read -r MODEL_NAME_TAG; do
         continue
     fi
 
-    BLOB_HASH=$(ollama show --json "$MODEL_NAME_TAG" | grep -A 1 '"mediaType": "application/vnd.ollama.image.model"' | tail -n 1 | grep -o 'sha256:[a-f0-9]*' | sed 's/sha256:/sha256-/g')
+    # --- FIX: Changed --json to --format json for compatibility with newer Ollama versions ---
+    BLOB_HASH=$(ollama show --format json "$MODEL_NAME_TAG" | grep -A 1 '"mediaType": "application/vnd.ollama.image.model"' | tail -n 1 | grep -o 'sha256:[a-f0-9]*' | sed 's/sha256:/sha256-/g')
 
     if [ -z "$BLOB_HASH" ]; then
         echo "[ERROR] Could not determine blob hash for '$MODEL_NAME_TAG'. Skipping."
