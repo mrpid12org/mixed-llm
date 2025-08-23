@@ -3,38 +3,40 @@ set -e
 
 echo "--- Clearing previous session logs... ---"
 mkdir -p /workspace/logs
-rm -f /workspace/logs/*
+
+# --- FIX: Ensure ALL persistent directories are created at startup ---
+echo "--- Ensuring base persistent directories exist... ---"
+mkdir -p "${OLLAMA_MODELS}"
+mkdir -p "${COMFYUI_MODELS_DIR}"
+mkdir -p "${OPENWEBUI_DATA_DIR}"
+mkdir -p "${TEXTGEN_DATA_DIR}"
 
 # --- 1. Open WebUI Persistent Data Setup ---
-WEBUI_INTERNAL_DATA_DIR="/app/backend/data"
 echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
-mkdir -p "${OPENWEBUI_DATA_DIR}"
-if [ -d "$WEBUI_INTERNAL_DATA_DIR" ] && [ ! -L "$WEBUI_INTERNAL_DATA_DIR" ]; then
+if [ -d "/app/backend/data" ] && [ ! -L "/app/backend/data" ]; then
   echo "First run detected for Open WebUI. Migrating default data..."
-  rsync -a "$WEBUI_INTERNAL_DATA_DIR/" "${OPENWEBUI_DATA_DIR}/"
-  rm -rf "$WEBUI_INTERNAL_DATA_DIR"
+  rsync -a "/app/backend/data/" "${OPENWEBUI_DATA_DIR}/"
+  rm -rf "/app/backend/data"
 fi
-if [ ! -L "$WEBUI_INTERNAL_DATA_DIR" ]; then
-  ln -s "${OPENWEBUI_DATA_DIR}" "$WEBUI_INTERNAL_DATA_DIR"
+if [ ! -L "/app/backend/data" ]; then
+  ln -s "${OPENWEBUI_DATA_DIR}" "/app/backend/data"
 fi
 echo "--- Open WebUI persistence configured. ---"
 
 # --- 2. ComfyUI Model Path Setup ---
-COMFYUI_MODEL_PATHS_FILE="/opt/ComfyUI/extra_model_paths.yaml"
 echo "--- Ensuring ComfyUI is using the correct model path config... ---"
-ln -sf /etc/comfyui_model_paths.yaml "$COMFYUI_MODEL_PATHS_FILE"
+ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
 echo "--- ComfyUI model paths configured. ---"
 
-# --- 3. Text-Generation-WebUI Persistent Data Setup (from parent build) ---
-TEXTGEN_APP_DIR="/opt/text-generation-webui"
+# --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
 TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets prompts training"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
-    if [ -d "${TEXTGEN_APP_DIR}/${dir}" ] && [ ! -L "${TEXTGEN_APP_DIR}/${dir}" ]; then
-        rm -rf "${TEXTGEN_APP_DIR}/${dir}"
+    if [ -d "/opt/text-generation-webui/${dir}" ] && [ ! -L "/opt/text-generation-webui/${dir}" ]; then
+        rm -rf "/opt/text-generation-webui/${dir}"
     fi
     mkdir -p "${TEXTGEN_DATA_DIR}/${dir}"
-    ln -sf "${TEXTGEN_DATA_DIR}/${dir}" "${TEXTGEN_APP_DIR}/${dir}"
+    ln -sf "${TEXTGEN_DATA_DIR}/${dir}" "/opt/text-generation-webui/${dir}"
 done
 echo "--- Text-Generation-WebUI persistence configured. ---"
 
