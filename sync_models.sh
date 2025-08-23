@@ -1,18 +1,17 @@
 #!/bin/bash
-# SCRIPT V2.3 - Corrected ollama show format and default model name
+# SCRIPT V3.0 - Uses the proven curl/python method from the parent build.
 
 # Give the Ollama server time to start up properly.
 sleep 45
 
 # --- Configuration ---
-# FIX: Using a standard, valid Ollama library model name.
-# You can change this to another valid name from ollama.com/library if you wish.
+# Use a standard, valid Ollama library model name.
 MODEL_TO_PULL=${OLLAMA_DEFAULT_MODEL:-"phi3:latest"}
 SYMLINK_DIR=${TEXTGEN_MODELS_DIR}
 BLOBS_DIR="${OLLAMA_MODELS}/blobs"
 
 echo "====================================================================="
-echo "--- Starting Model Sync Script (v2.3) ---"
+echo "--- Starting Model Sync Script (v3.0) ---"
 echo "====================================================================="
 
 # --- 1. PULL DEFAULT OLLAMA MODEL ---
@@ -49,11 +48,21 @@ ollama list | awk '{print $1}' | tail -n +2 | while read -r MODEL_NAME_TAG; do
         continue
     fi
 
-    # --- FIX: Changed --json to --format json for compatibility with newer Ollama versions ---
-    BLOB_HASH=$(ollama show --format json "$MODEL_NAME_TAG" | grep -A 1 '"mediaType": "application/vnd.ollama.image.model"' | tail -n 1 | grep -o 'sha256:[a-f0-9]*' | sed 's/sha256:/sha256-/g')
+    # --- FIX: Using the proven curl and python method to get blob info ---
+    JSON_OUTPUT=$(curl -s http://127.0.0.1:11434/api/show -d "{\"name\": \"$MODEL_NAME_TAG\"}")
+    BLOB_HASH=$(echo "$JSON_OUTPUT" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    digest = data.get('details', {}).get('digest', '')
+    if digest:
+        print(digest.replace('sha256:', 'sha256-'))
+except (json.JSONDecodeError, KeyError):
+    pass
+")
 
     if [ -z "$BLOB_HASH" ]; then
-        echo "[ERROR] Could not determine blob hash for '$MODEL_NAME_TAG'. Skipping."
+        echo "[ERROR] Could not determine blob hash for '$MODEL_NAME_TAG' via API. Skipping."
         continue
     fi
     
