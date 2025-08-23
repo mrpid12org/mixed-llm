@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v6.0-ADD-COMFYUI-MANAGER ---"
+RUN echo "--- DOCKERFILE VERSION: v6.1-COPY-SYNTAX-FIX ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -67,7 +67,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd was-node-suite-comfyui && \
     python3 -m pip install --no-cache-dir -r requirements.txt
 
-# --- 10. FIX: Install ComfyUI Manager ---
+# --- 10. Install ComfyUI Manager ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
@@ -105,12 +105,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Copy ALL Built Assets from 'builder' Stage ---
-COPY --from-builder /opt/venv /opt/venv
-COPY --from-builder /app/backend /app/backend
-COPY --from-builder /app/build /app/build
-COPY --from-builder /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --from-builder /opt/ComfyUI /opt/ComfyUI
-COPY --from-builder /opt/text-generation-webui /opt/text-generation-webui
+# --- FIX: Corrected --from-builder to --from=builder ---
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app/backend /app/backend
+COPY --from=builder /app/build /app/build
+COPY --from=builder /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=builder /opt/ComfyUI /opt/ComfyUI
+COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
 
 # --- 3. Install Ollama ---
 RUN curl -fsSL https://ollama.com/install.sh | sh
