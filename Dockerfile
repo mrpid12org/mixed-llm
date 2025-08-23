@@ -1,17 +1,15 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.2-NODE-VERSION-FIX
+# v7.3-GIT-IN-BUILDER-FIX
 # This Dockerfile uses multi-stage builds to isolate each application,
 # and incorporates build caching best practices.
 
 # =====================================================================================
 # STAGE 1: Build Open WebUI Assets
 # =====================================================================================
-# FIX: Use the latest Node.js v20 to satisfy dependency requirements.
 FROM node:20-bookworm AS openwebui-assets
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-# FIX: Cleaned up redundant/incorrect npm commands.
 RUN npm install --legacy-peer-deps && \
     npm install @tiptap/suggestion --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
@@ -43,8 +41,9 @@ ENV PIP_ROOT_USER_ACTION=ignore
 ENV PYTHON_VERSION=3.11
 
 # --- 1. Install System Build Dependencies ---
+# --- FIX: Added 'git' to the package list ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl build-essential aria2 cmake python${PYTHON_VERSION} \
+    git curl build-essential aria2 cmake python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
