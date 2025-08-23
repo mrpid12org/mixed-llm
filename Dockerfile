@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v5.4-SCRIPT-PATH-FIX ---"
+RUN echo "--- DOCKERFILE VERSION: v5.5-ADD-MODELFILE-SCRIPT ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -123,10 +123,11 @@ COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
-# --- FIX: Changed destination to / to match other scripts ---
 COPY download_and_join.sh /download_and_join.sh
-# --- FIX: Updated chmod path to match ---
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /download_and_join.sh
+# --- FIX: Added the new create_modelfile.sh script ---
+COPY create_modelfile.sh /create_modelfile.sh
+# --- FIX: Updated chmod to include the new script ---
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /download_and_join.sh /create_modelfile.sh
 
 # --- 6. Expose ports and set entrypoint ---
 EXPOSE 8080 8188 7860
