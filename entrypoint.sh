@@ -4,7 +4,7 @@ set -e
 echo "--- Clearing previous session logs... ---"
 mkdir -p /workspace/logs
 
-# --- FIX: Ensure ALL persistent directories are created at startup ---
+# --- Ensure ALL persistent directories are created at startup ---
 echo "--- Ensuring base persistent directories exist... ---"
 mkdir -p "${OLLAMA_MODELS}"
 mkdir -p "${COMFYUI_MODELS_DIR}"
@@ -23,10 +23,24 @@ if [ ! -L "/app/backend/data" ]; then
 fi
 echo "--- Open WebUI persistence configured. ---"
 
-# --- 2. ComfyUI Model Path Setup ---
-echo "--- Ensuring ComfyUI is using the correct model path config... ---"
+# --- 2. ComfyUI Persistence Setup ---
+echo "--- Ensuring ComfyUI data is persistent... ---"
+# Link the model paths configuration file
 ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
-echo "--- ComfyUI model paths configured. ---"
+
+# Symlink important data directories to the workspace
+COMFYUI_DIRS_TO_PERSIST="input output custom_nodes workflows"
+for dir in $COMFYUI_DIRS_TO_PERSIST; do
+    # If the directory exists in the app and is not a link, remove it
+    if [ -d "/opt/ComfyUI/${dir}" ] && [ ! -L "/opt/ComfyUI/${dir}" ]; then
+        rm -rf "/opt/ComfyUI/${dir}"
+    fi
+    # Create the directory in the persistent volume
+    mkdir -p "${COMFYUI_MODELS_DIR}/${dir}"
+    # Create the symlink from the app to the persistent volume
+    ln -sf "${COMFYUI_MODELS_DIR}/${dir}" "/opt/ComfyUI/${dir}"
+done
+echo "--- ComfyUI persistence configured. ---"
 
 # --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
