@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.3-GIT-IN-BUILDER-FIX
+# v7.4-NUMPY-DEPENDENCY-FIX
 # This Dockerfile uses multi-stage builds to isolate each application,
 # and incorporates build caching best practices.
 
@@ -41,7 +41,6 @@ ENV PIP_ROOT_USER_ACTION=ignore
 ENV PYTHON_VERSION=3.11
 
 # --- 1. Install System Build Dependencies ---
-# --- FIX: Added 'git' to the package list ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl build-essential aria2 cmake python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-venv \
@@ -60,6 +59,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # --- 4. Install ALL Python Dependencies ---
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# --- FIX: Pin numpy to a compatible version BEFORE installing other requirements ---
+RUN python3 -m pip install --no-cache-dir "numpy<2"
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
