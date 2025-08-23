@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v5.5-ADD-MODELFILE-SCRIPT ---"
+RUN echo "--- DOCKERFILE VERSION: v6.0-ADD-COMFYUI-MANAGER ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -67,6 +67,12 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd was-node-suite-comfyui && \
     python3 -m pip install --no-cache-dir -r requirements.txt
 
+# --- 10. FIX: Install ComfyUI Manager ---
+RUN cd /opt/ComfyUI/custom_nodes && \
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
+    cd ComfyUI-Manager && \
+    python3 -m pip install --no-cache-dir -r requirements.txt
+
 # =====================================================================================
 # STAGE 2: The Final Image - Lean and optimized for production
 # =====================================================================================
@@ -99,12 +105,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Copy ALL Built Assets from 'builder' Stage ---
-COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /app/backend /app/backend
-COPY --from=builder /app/build /app/build
-COPY --from=builder /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --from=builder /opt/ComfyUI /opt/ComfyUI
-COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
+COPY --from-builder /opt/venv /opt/venv
+COPY --from-builder /app/backend /app/backend
+COPY --from-builder /app/build /app/build
+COPY --from-builder /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from-builder /opt/ComfyUI /opt/ComfyUI
+COPY --from-builder /opt/text-generation-webui /opt/text-generation-webui
 
 # --- 3. Install Ollama ---
 RUN curl -fsSL https://ollama.com/install.sh | sh
@@ -124,9 +130,7 @@ COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
-# --- FIX: Added the new create_modelfile.sh script ---
 COPY create_modelfile.sh /create_modelfile.sh
-# --- FIX: Updated chmod to include the new script ---
 RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /download_and_join.sh /create_modelfile.sh
 
 # --- 6. Expose ports and set entrypoint ---
