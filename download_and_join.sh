@@ -1,29 +1,61 @@
 #!/bin/bash
-# SCRIPT V4.2 - Reverted to 'cat' for filesystems that don't support 'fallocate'.
-# WARNING: This script requires at least 25GB of free space AFTER downloads complete.
+# SCRIPT V5.2 - Added error handling for unsupported URL patterns.
 set -e
 
-# --- 1. Configuration ---
-URL_PART1="https://huggingface.co/lmstudio-community/gpt-oss-120b-GGUF/resolve/main/gpt-oss-120b-MXFP4-00001-of-00002.gguf?download=true"
-URL_PART2="https://huggingface.co/lmstudio-community/gpt-oss-120b-GGUF/resolve/main/gpt-oss-120b-MXFP4-00002-of-00002.gguf?download=true"
+# --- 1. Argument Check ---
+if [ -z "$1" ]; then
+    echo "--- ERROR: No URL provided. ---"
+    echo "Usage: ./download_and_join.sh \"<URL for part 1>\""
+    exit 1
+fi
 
-FILENAME_PART1="gpt-oss-120b-MXFP4-00001-of-00002.gguf"
-FILENAME_PART2="gpt-oss-120b-MXFP4-00002-of-00002.gguf"
+URL_PART1="$1"
+URL_PART2=""
+FINAL_MODEL_NAME=""
 
-FINAL_MODEL_NAME="gpt-oss-120b-MXFP4.gguf"
+# --- 2. Intelligently Determine URL and Final Filename ---
+# Use standard temporary filenames
+FILENAME_PART1="part1.gguf.tmp"
+FILENAME_PART2="part2.gguf.tmp"
+URL_PATH=$(echo "$URL_PART1" | cut -d'?' -f1)
+BASE_FILENAME=$(basename "$URL_PATH")
 
-# --- Sanity Check: Exit if final model already exists ---
+# Check for the '...-00001-of-00002.gguf' pattern
+if [[ "$URL_PART1" == *"-00001-of-00002.gguf"* ]]; then
+    echo "--- Detected '-00001-of-00002' naming convention. ---"
+    URL_PART2=$(echo "$URL_PART1" | sed 's/-00001-of-00002/-00002-of-00002/')
+    FINAL_MODEL_NAME=$(echo "$BASE_FILENAME" | sed 's/-00001-of-00002.gguf//').gguf
+# Check for the '....gguf.part1of2' pattern
+elif [[ "$URL_PART1" == *".gguf.part1of2"* ]]; then
+    echo "--- Detected '.part1of2' naming convention. ---"
+    URL_PART2=$(echo "$URL_PART1" | sed 's/\.part1of2$/.part2of2/')
+    FINAL_MODEL_NAME=$(echo "$BASE_FILENAME" | sed 's/\.part1of2$//')
+# --- FIX: Added error handling for unsupported patterns ---
+else
+    echo "--- ERROR: Unsupported part naming convention in URL. ---"
+    echo "This script only supports URLs ending in:"
+    echo "  1) ...-00001-of-00002.gguf"
+    echo "  2) ....gguf.part1of2"
+    exit 1
+fi
+
+echo "====================================================================="
+echo "--- Model Download & Join Script (v5.2) ---"
+echo "  > Final Model Name: $FINAL_MODEL_NAME"
+echo "====================================================================="
+
+# --- 3. Sanity Check: Exit if final model already exists ---
 if [ -f "$FINAL_MODEL_NAME" ]; then
     echo "--- INFO: Final model '$FINAL_MODEL_NAME' already exists. Nothing to do. ---"
     exit 0
 fi
 
-# --- 2. Download Files with Aria2c (with resume capability) ---
+# --- 4. Download Files with Aria2c (with resume capability) ---
 echo "--- Starting Download ---"
-echo "Downloading Part 1..."
+echo "Downloading Part 1 from: $URL_PART1"
 aria2c -c -x 16 -s 16 -k 1M -o "$FILENAME_PART1" "$URL_PART1"
 
-echo "Downloading Part 2..."
+echo "Downloading Part 2 from: $URL_PART2"
 aria2c -c -x 16 -s 16 -k 1M -o "$FILENAME_PART2" "$URL_PART2"
 
 # --- Verification ---
@@ -36,20 +68,18 @@ echo "--- Download Complete ---"
 echo "File sizes:"
 ls -lh "$FILENAME_PART1" "$FILENAME_PART2"
 
-# --- 3. Join Files using 'cat' ---
+# --- 5. Join Files using 'cat' ---
 echo "--- Joining files... This may take some time. ---"
-# This appends the content of part 2 to part 1.
-# If this fails due to lack of space, 'set -e' will stop the script here.
 cat "$FILENAME_PART2" >> "$FILENAME_PART1"
 echo "--- Join complete. ---"
 
-# --- 4. Clean Up ---
+# --- 6. Clean Up ---
 echo "--- Cleaning up temporary files... ---"
 rm "$FILENAME_PART2"
 echo "--- Renaming final model... ---"
 mv "$FILENAME_PART1" "$FINAL_MODEL_NAME"
 
-# --- 5. Final Verification ---
+# --- 7. Final Verification ---
 echo "--- All Done! ---"
 echo "Final model created: $FINAL_MODEL_NAME"
 echo "Final file size:"
