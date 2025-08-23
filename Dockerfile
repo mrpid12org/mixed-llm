@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v5.2-FINAL-REQUIREMENTS-PATH-FIX ---"
+RUN echo "--- DOCKERFILE VERSION: v5.4-SCRIPT-PATH-FIX ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -31,7 +31,7 @@ RUN curl -L -o webui.tar.gz "${WEBUI_ARTIFACT_URL}" && \
     tar -xzvf webui.tar.gz && \
     rm webui.tar.gz
 
-# --- 3. FIX: Add the missing CHANGELOG.md ---
+# --- 3. Add the missing CHANGELOG.md ---
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
 
 # --- 4. Prepare Unified Python Virtual Environment ---
@@ -51,7 +51,6 @@ RUN git clone https://github.com/oobabooga/text-generation-webui.git
 # --- 7. Install ALL Application Python Dependencies into the single venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-# --- FIX: Using the correct path from the newer repository structure ---
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
@@ -124,8 +123,10 @@ COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
-COPY download_and_join.sh /usr/local/bin/download_and_join.sh
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /usr/local/bin/download_and_join.sh
+# --- FIX: Changed destination to / to match other scripts ---
+COPY download_and_join.sh /download_and_join.sh
+# --- FIX: Updated chmod path to match ---
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /download_and_join.sh
 
 # --- 6. Expose ports and set entrypoint ---
 EXPOSE 8080 8188 7860
