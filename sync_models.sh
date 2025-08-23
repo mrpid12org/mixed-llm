@@ -5,7 +5,7 @@
 sleep 45
 
 # --- Configuration ---
-MODEL_TO_PULL=${OLLAMA_DEFAULT_MODEL:-"phi3:3.8b-mini-instruct-4k-q4_K_M"}
+MODEL_TO_PULL=${OLLAMA_DEFAULT_MODEL:-"hf.co/mlabonne/gemma-3-27b-it-abliterated-GGUF:Q6_K"}
 SYMLINK_DIR=${TEXTGEN_MODELS_DIR}
 BLOBS_DIR="${OLLAMA_MODELS}/blobs"
 
