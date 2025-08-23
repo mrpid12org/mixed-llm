@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v4.1-FIXED-CHANGELOG-COPY ---"
+RUN echo "--- DOCKERFILE VERSION: v5.0-UNIFIED-VENV-FIX ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -31,34 +31,38 @@ RUN curl -L -o webui.tar.gz "${WEBUI_ARTIFACT_URL}" && \
     tar -xzvf webui.tar.gz && \
     rm webui.tar.gz
 
-# --- 3. Prepare Unified Python Virtual Environment ---
+# --- 3. FIX: Add the missing CHANGELOG.md ---
+# We download it directly from the repo since the asset build doesn't include it.
+RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
+
+# --- 4. Prepare Unified Python Virtual Environment ---
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# --- 4. Install Core Python ML & AI Libraries ---
+# --- 5. Install Core Python ML & AI Libraries ---
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install --no-cache-dir \
     torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
-# --- 5. Clone Other Application Repositories ---
+# --- 6. Clone Other Application Repositories ---
 WORKDIR /opt
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 RUN git clone https://github.com/oobabooga/text-generation-webui.git
 
-# --- 6. Install All Application Python Dependencies into the venv ---
+# --- 7. Install ALL Application Python Dependencies into the single venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
-RUN python3 -m pip install --no-cache-dir exllamav2 ctransformers
+RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements.txt
+RUN python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
-# --- 7. Recompile llama-cpp-python with CUDA Support ---
+# --- 8. Recompile llama-cpp-python with CUDA Support ---
 RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so.1
-ARG TORCH_CUDA_ARCH_LIST="8.9;9.0;10.0"
+ARG TORCH_CUDA_ARCH_LIST="8.9;9.0"
 RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
-# --- 8. Install ComfyUI Custom Nodes ---
+# --- 9. Install ComfyUI Custom Nodes ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
@@ -99,8 +103,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/backend /app/backend
 COPY --from=builder /app/build /app/build
-# --- FIX: REMOVED THE LINE BELOW ---
-# COPY --from=builder /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=builder /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
 
