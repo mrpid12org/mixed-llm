@@ -25,32 +25,31 @@ echo "--- Open WebUI persistence configured. ---"
 
 # --- 2. ComfyUI Persistence Setup ---
 echo "--- Ensuring ComfyUI data is persistent... ---"
-# Link the model paths configuration file
 ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
-
-# Symlink important data directories to the workspace
 COMFYUI_DIRS_TO_PERSIST="input output custom_nodes workflows"
 for dir in $COMFYUI_DIRS_TO_PERSIST; do
-    # If the directory exists in the app and is not a link, remove it
     if [ -d "/opt/ComfyUI/${dir}" ] && [ ! -L "/opt/ComfyUI/${dir}" ]; then
         rm -rf "/opt/ComfyUI/${dir}"
     fi
-    # Create the directory in the persistent volume
     mkdir -p "${COMFYUI_MODELS_DIR}/${dir}"
-    # Create the symlink from the app to the persistent volume
     ln -sf "${COMFYUI_MODELS_DIR}/${dir}" "/opt/ComfyUI/${dir}"
 done
 echo "--- ComfyUI persistence configured. ---"
 
 # --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
-TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets prompts training"
+# FIX: Added 'mmproj' and other relevant user_data directories
+TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets training mmproj logs instruction-templates"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
-    if [ -d "/opt/text-generation-webui/${dir}" ] && [ ! -L "/opt/text-generation-webui/${dir}" ]; then
-        rm -rf "/opt/text-generation-webui/${dir}"
+    APP_PATH="/opt/text-generation-webui/user_data/${dir}"
+    WORKSPACE_PATH="${TEXTGEN_DATA_DIR}/${dir}"
+
+    if [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ]; then
+        rm -rf "${APP_PATH}"
     fi
-    mkdir -p "${TEXTGEN_DATA_DIR}/${dir}"
-    ln -sf "${TEXTGEN_DATA_DIR}/${dir}" "/opt/text-generation-webui/${dir}"
+    mkdir -p "${WORKSPACE_PATH}"
+    # FIX: Corrected symlink to point into the user_data directory
+    ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- Text-Generation-WebUI persistence configured. ---"
 
