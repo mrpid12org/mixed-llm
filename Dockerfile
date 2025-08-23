@@ -1,22 +1,21 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.1-OPTIMIZED-BUILD
+# v7.2-NODE-VERSION-FIX
 # This Dockerfile uses multi-stage builds to isolate each application,
 # and incorporates build caching best practices.
 
 # =====================================================================================
 # STAGE 1: Build Open WebUI Assets
 # =====================================================================================
-# FIX: Pinned to a specific version for reproducibility
-FROM node:20.12-bookworm AS openwebui-assets
+# FIX: Use the latest Node.js v20 to satisfy dependency requirements.
+FROM node:20-bookworm AS openwebui-assets
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-# FIX: Using npm ci for faster, more deterministic builds in CI
+# FIX: Cleaned up redundant/incorrect npm commands.
 RUN npm install --legacy-peer-deps && \
     npm install @tiptap/suggestion --legacy-peer-deps && \
     npm install lowlight --legacy-peer-deps && \
     npm install y-protocols --legacy-peer-deps
-RUN npm ci --legacy-peer-deps
 RUN npm run build
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
 
@@ -89,7 +88,6 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 # =====================================================================================
 FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 
-# FIX: Added a label for better metadata
 LABEL org.opencontainers.image.title="Mixed-LLM Stack" \
       org.opencontainers.image.version="1.0" \
       org.opencontainers.image.description="A container running Open WebUI, ComfyUI, and Text-Generation-WebUI."
