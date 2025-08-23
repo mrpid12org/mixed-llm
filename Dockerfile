@@ -4,7 +4,7 @@
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
 # --- BUILD VERSION IDENTIFIER ---
-RUN echo "--- DOCKERFILE VERSION: v5.0-UNIFIED-VENV-FIX ---"
+RUN echo "--- DOCKERFILE VERSION: v5.2-FINAL-REQUIREMENTS-PATH-FIX ---"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
@@ -32,7 +32,6 @@ RUN curl -L -o webui.tar.gz "${WEBUI_ARTIFACT_URL}" && \
     rm webui.tar.gz
 
 # --- 3. FIX: Add the missing CHANGELOG.md ---
-# We download it directly from the repo since the asset build doesn't include it.
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
 
 # --- 4. Prepare Unified Python Virtual Environment ---
@@ -52,7 +51,8 @@ RUN git clone https://github.com/oobabooga/text-generation-webui.git
 # --- 7. Install ALL Application Python Dependencies into the single venv ---
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements.txt
+# --- FIX: Using the correct path from the newer repository structure ---
+RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
 # --- 8. Recompile llama-cpp-python with CUDA Support ---
