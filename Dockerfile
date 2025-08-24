@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.5-GIT-FLASHATTN-FIX
+# v7.6-DEPENDENCY-PIN-FIX
 
 # =====================================================================================
 # STAGE 1: Build Open WebUI Assets
@@ -57,7 +57,15 @@ ENV PATH="/opt/venv/bin:$PATH"
 # --- 4. Install ALL Python Dependencies ---
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-RUN python3 -m pip install --no-cache-dir "numpy<2"
+
+# --- FIX: Pin critical dependencies BEFORE installing from requirements.txt files ---
+RUN python3 -m pip install --no-cache-dir \
+    "numpy~=1.26.4" \
+    "pydantic>=2.11.2" \
+    "websockets>=13.0,<15.1.0" \
+    "aiofiles>=24.1.0"
+
+# Now install from the various requirements files
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
@@ -72,7 +80,7 @@ RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
 
-# --- FIX: Force re-installation of flash-attn to compile against the correct torch version ---
+# Force re-installation of flash-attn to compile against the correct torch version
 RUN python3 -m pip install --no-cache-dir --force-reinstall flash-attn
 
 # --- 6. Install ComfyUI Custom Nodes ---
@@ -107,7 +115,6 @@ ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
-# --- FIX: Added git to the final stage for ComfyUI-Manager ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
