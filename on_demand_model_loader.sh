@@ -1,15 +1,14 @@
 #!/bin/bash
-# SCRIPT V1.1 - Updated with correct abliterated model URL
+# SCRIPT V1.2 - Added cleanup step for temporary files
 set -e
 
 # --- Configuration ---
-# --- FIX: Updated to the correct model name and URL ---
 MODEL_NAME_TO_CHECK="Huihui-gpt-oss-120b-BF16-abliterated.i1-Q4_K_S"
 MODEL_DOWNLOAD_URL="https://huggingface.co/mradermacher/Huihui-gpt-oss-120b-BF16-abliterated-i1-GGUF/resolve/main/Huihui-gpt-oss-120b-BF16-abliterated.i1-Q4_K_S.gguf.part1of2"
 WORK_DIR="/workspace/temp_gguf"
 
 echo "====================================================================="
-echo "--- On-Demand Model Loader (v1.1) ---"
+echo "--- On-Demand Model Loader (v1.2) ---"
 echo "====================================================================="
 
 # Give the Ollama server time to start up properly.
@@ -31,7 +30,6 @@ else
   /create_modelfile.sh
   
   # --- 4. Create the model in Ollama ---
-  # Find the generated Modelfile to use with the create command
   MODELFILE_TO_CREATE=$(ls -t "$WORK_DIR"/*.Modelfile 2>/dev/null | head -n 1)
   if [ -z "$MODELFILE_TO_CREATE" ]; then
       echo "--- ERROR: No .Modelfile found in $WORK_DIR after script execution. ---"
@@ -39,12 +37,16 @@ else
   fi
   
   echo "[INFO] Creating model in Ollama from ${MODELFILE_TO_CREATE}..."
-  # We must be in the directory with the GGUF file for the 'FROM' command to work
   cd "$WORK_DIR"
   ollama create "${MODEL_NAME_TO_CHECK}" -f "${MODELFILE_TO_CREATE}"
   echo "--- Ollama model creation complete. ---"
+
+  # --- 5. Clean up temporary files ---
+  echo "[INFO] Cleaning up temporary GGUF and Modelfile from ${WORK_DIR}..."
+  rm -f "${WORK_DIR}"/*
+  echo "--- Cleanup complete. ---"
 fi
 
-# --- 5. Run the main sync_models.sh script ---
+# --- 6. Run the main sync_models.sh script ---
 echo "[INFO] All checks complete. Proceeding with sync_models.sh... ---"
 exec /sync_models.sh
