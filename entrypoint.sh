@@ -46,7 +46,7 @@ for dir in $ROOT_DIRS; do
     if [ "$dir" == "custom_nodes" ] && [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ] && [ -n "$(ls -A "${APP_PATH}")" ]; then
         echo "--- Migrating pre-installed ComfyUI custom nodes to workspace... ---"
         mkdir -p "${WORKSPACE_PATH}"
-        cp -rT "${APP_PATH}/" "${WORKSPACE_PATH}/"
+        cp -aT "${APP_PATH}/" "${WORKSPACE_PATH}/"
     fi
 
     # Create the symlink
