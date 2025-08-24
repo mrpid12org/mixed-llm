@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v8.1-NO-BUILD-ISOLATION-FIX
+# v8.2-WHEEL-DEPENDENCY-FIX
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
@@ -62,7 +62,7 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir torch torchvision 
 RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 
 # Install ComfyUI dependencies
-RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip
+RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip wheel setuptools
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 # --- FIX: Install flash-attn with --no-build-isolation to use the existing torch install ---
