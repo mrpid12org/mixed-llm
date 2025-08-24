@@ -1,36 +1,36 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.6-DEPENDENCY-PIN-FIX
+# v7.8-ISOLATED-VENV-FIX
 
 # =====================================================================================
-# STAGE 1: Build Open WebUI Assets
+# STAGE 1: Asset Fetching
 # =====================================================================================
-FROM node:20-bookworm AS openwebui-assets
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+FROM alpine/git:latest AS openwebui-assets
 WORKDIR /app
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-RUN npm install --legacy-peer-deps && \
-    npm install @tiptap/suggestion --legacy-peer-deps && \
-    npm install lowlight --legacy-peer-deps && \
-    npm install y-protocols --legacy-peer-deps
-RUN npm run build
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
 
-# =====================================================================================
-# STAGE 2: Fetch ComfyUI Assets
-# =====================================================================================
 FROM alpine/git:latest AS comfyui-assets
 WORKDIR /opt
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 
-# =====================================================================================
-# STAGE 3: Fetch text-generation-webui Assets
-# =====================================================================================
 FROM alpine/git:latest AS text-generation-webui-assets
 WORKDIR /opt
 RUN git clone https://github.com/oobabooga/text-generation-webui.git
 
 # =====================================================================================
-# STAGE 4: The Python Builder
+# STAGE 2: Web UI Asset Builder
+# =====================================================================================
+FROM node:20-bookworm AS webui-builder
+WORKDIR /app
+COPY --from=openwebui-assets /app /app
+RUN npm install --legacy-peer-deps && \
+    npm install @tiptap/suggestion --legacy-peer-deps && \
+    npm install lowlight --legacy-peer-deps && \
+    npm install y-protocols --legacy-peer-deps
+RUN npm run build
+
+# =====================================================================================
+# STAGE 3: Python Builder with Isolated Environments
 # =====================================================================================
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS builder
 
@@ -46,55 +46,43 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Copy all application assets ---
-COPY --from=openwebui-assets /app /app
+COPY --from=webui-builder /app /app
 COPY --from=comfyui-assets /opt/ComfyUI /opt/ComfyUI
 COPY --from=text-generation-webui-assets /opt/text-generation-webui /opt/text-generation-webui
 
-# --- 3. Prepare Unified Python Virtual Environment ---
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# --- 3. Create and Install Dependencies for ISOLATED Environments ---
+RUN python3 -m venv /opt/venv-webui
+RUN python3 -m venv /opt/venv-comfyui
+RUN python3 -m venv /opt/venv-textgen
 
-# --- 4. Install ALL Python Dependencies ---
-RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# Install Open WebUI dependencies
+RUN /opt/venv-webui/bin/python3 -m pip install --upgrade pip
+RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 
-# --- FIX: Pin critical dependencies BEFORE installing from requirements.txt files ---
-RUN python3 -m pip install --no-cache-dir \
-    "numpy~=1.26.4" \
-    "pydantic>=2.11.2" \
-    "websockets>=13.0,<15.1.0" \
-    "aiofiles>=24.1.0"
+# Install ComfyUI dependencies
+RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 
-# Now install from the various requirements files
-RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
-RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
-RUN python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
+# Install Text-Generation-WebUI dependencies
+RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
-# --- 5. Recompile llama-cpp-python and flash-attn with CUDA Support ---
-RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so.1
-ARG TORCH_CUDA_ARCH_LIST="8.9;9.0"
-
-# Recompile llama-cpp-python
-RUN CMAKE_ARGS="-DGGML_CUDA=on" \
-    TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
-    python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
-
-# Force re-installation of flash-attn to compile against the correct torch version
-RUN python3 -m pip install --no-cache-dir --force-reinstall flash-attn
-
-# --- 6. Install ComfyUI Custom Nodes ---
+# --- 4. Install ComfyUI Custom Nodes (into the ComfyUI venv) ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
-    python3 -m pip install --no-cache-dir -r requirements.txt
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
-    python3 -m pip install --no-cache-dir -r requirements.txt
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
 # =====================================================================================
-# STAGE 5: The Final Image
+# STAGE 4: The Final Image
 # =====================================================================================
 FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 
@@ -105,7 +93,6 @@ LABEL org.opencontainers.image.title="Mixed-LLM Stack" \
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
-ENV PATH="/opt/venv/bin:$PATH"
 ENV OLLAMA_MODELS=/workspace/ollama
 ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
@@ -121,10 +108,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
-COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /app/backend /app/backend
-COPY --from=builder /app/build /app/build
-COPY --from=builder /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=builder /opt/venv-webui /opt/venv-webui
+COPY --from=builder /opt/venv-comfyui /opt/venv-comfyui
+COPY --from=builder /opt/venv-textgen /opt/venv-textgen
+COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
 
