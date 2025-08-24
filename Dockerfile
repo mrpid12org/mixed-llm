@@ -1,10 +1,12 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.8-ISOLATED-VENV-FIX
+# v7.9-CURL-IN-ASSETS-FIX
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
 # =====================================================================================
 FROM alpine/git:latest AS openwebui-assets
+# --- FIX: Install curl in the alpine stage ---
+RUN apk add --no-cache curl
 WORKDIR /app
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
