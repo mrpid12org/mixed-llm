@@ -28,17 +28,29 @@ echo "--- Open WebUI persistence configured. ---"
 echo "--- Ensuring ComfyUI data is persistent... ---"
 ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
 
-# --- FIX: Added all model and workflow directories to the persistence list ---
-COMFYUI_DIRS_TO_PERSIST="input output custom_nodes workflows checkpoints unet vae clip loras t5 controlnet embeddings hypernetworks style_models upscale_models gligen"
+# --- FIX: Comprehensive list of all potential ComfyUI directories ---
+COMFYUI_DIRS_TO_PERSIST="animatediff_models animatediff_motion_lora checkpoints clip clip_vision configs controlnet custom_nodes diffusers diffusion_models embeddings gligen hypernetworks ipadapter loras photomaker style_models t5 text_encoders unet upscale_models vae workflows input output"
 for dir in $COMFYUI_DIRS_TO_PERSIST; do
-    # Remove the original directory in the container if it exists and is not a symlink
-    if [ -d "/opt/ComfyUI/models/${dir}" ] && [ ! -L "/opt/ComfyUI/models/${dir}" ]; then
-        rm -rf "/opt/ComfyUI/models/${dir}"
+    # Define the source path inside the container's app directory
+    APP_MODEL_PATH="/opt/ComfyUI/models/${dir}"
+    if [ "$dir" == "input" ] || [ "$dir" == "output" ] || [ "$dir" == "custom_nodes" ] || [ "$dir" == "workflows" ]; then
+      APP_MODEL_PATH="/opt/ComfyUI/${dir}"
     fi
+    
+    # Define the target path in the persistent workspace
+    WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
+
+    # Remove the original directory in the container if it exists and is not a symlink
+    if [ -d "${APP_MODEL_PATH}" ] && [ ! -L "${APP_MODEL_PATH}" ]; then
+        rm -rf "${APP_MODEL_PATH}"
+    fi
+    
     # Create the target directory in the persistent volume
-    mkdir -p "${COMFYUI_MODELS_DIR}/${dir}"
+    mkdir -p "${WORKSPACE_PATH}"
+    # Ensure the parent directory for the symlink exists
+    mkdir -p "$(dirname "${APP_MODEL_PATH}")"
     # Create the symlink from the container to the persistent volume
-    ln -sf "${COMFYUI_MODELS_DIR}/${dir}" "/opt/ComfyUI/models/${dir}"
+    ln -sf "${WORKSPACE_PATH}" "${APP_MODEL_PATH}"
 done
 echo "--- ComfyUI persistence configured. ---"
 
@@ -47,7 +59,6 @@ echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DI
 TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets training mmproj logs instruction-templates"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
     APP_PATH="/opt/text-generation-webui/${dir}"
-    # --- FIX: For 'models', the user data symlink should go into a 'user_data' subdir to avoid conflict ---
     if [ "$dir" == "models" ]; then
       APP_PATH="/opt/text-generation-webui/user_data/models"
     fi
@@ -57,7 +68,6 @@ for dir in $TEXTGEN_DIRS_TO_PERSIST; do
     if [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ]; then
         rm -rf "${APP_PATH}"
     fi
-    # Create parent directory if it doesn't exist
     mkdir -p "$(dirname "${APP_PATH}")"
     mkdir -p "${WORKSPACE_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
