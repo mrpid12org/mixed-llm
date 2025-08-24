@@ -1,11 +1,10 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.9-CURL-IN-ASSETS-FIX
+# v8.0-FINAL-FIX
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
 # =====================================================================================
 FROM alpine/git:latest AS openwebui-assets
-# --- FIX: Install curl in the alpine stage ---
 RUN apk add --no-cache curl
 WORKDIR /app
 RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
@@ -66,6 +65,8 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/re
 RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
+# --- FIX: Force re-install flash-attn and install GitPython in the ComfyUI venv ---
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall flash-attn GitPython
 
 # Install Text-Generation-WebUI dependencies
 RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
