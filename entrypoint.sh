@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# --- FIX: Set correct permissions for the workspace directory ---
+echo "--- Ensuring correct workspace permissions... ---"
+chown -R root:root /workspace
+echo "--- Permissions set. ---"
+
 echo "--- Clearing previous session logs... ---"
 mkdir -p /workspace/logs
 
@@ -28,7 +33,6 @@ echo "--- Open WebUI persistence configured. ---"
 echo "--- Ensuring ComfyUI data is persistent... ---"
 ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
 
-# --- FIX: Simplified and corrected the symlink logic for all ComfyUI directories ---
 # Define which directories are in the root of /opt/ComfyUI vs. in /opt/ComfyUI/models
 ROOT_DIRS="input output custom_nodes workflows"
 MODEL_SUBDIRS="animatediff_models animatediff_motion_lora checkpoints clip clip_vision configs controlnet diffusers diffusion_models embeddings gligen hypernetworks ipadapter loras photomaker style_models t5 text_encoders unet upscale_models vae"
