@@ -1,7 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v7.4-NUMPY-DEPENDENCY-FIX
-# This Dockerfile uses multi-stage builds to isolate each application,
-# and incorporates build caching best practices.
+# v7.5-GIT-FLASHATTN-FIX
 
 # =====================================================================================
 # STAGE 1: Build Open WebUI Assets
@@ -57,21 +55,25 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # --- 4. Install ALL Python Dependencies ---
-RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-# --- FIX: Pin numpy to a compatible version BEFORE installing other requirements ---
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN python3 -m pip install --no-cache-dir "numpy<2"
 RUN python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 RUN python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
-# --- 5. Recompile llama-cpp-python with CUDA Support ---
+# --- 5. Recompile llama-cpp-python and flash-attn with CUDA Support ---
 RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/libcuda.so.1
 ARG TORCH_CUDA_ARCH_LIST="8.9;9.0"
+
+# Recompile llama-cpp-python
 RUN CMAKE_ARGS="-DGGML_CUDA=on" \
     TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
     python3 -m pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
+
+# --- FIX: Force re-installation of flash-attn to compile against the correct torch version ---
+RUN python3 -m pip install --no-cache-dir --force-reinstall flash-attn
 
 # --- 6. Install ComfyUI Custom Nodes ---
 RUN cd /opt/ComfyUI/custom_nodes && \
@@ -105,8 +107,9 @@ ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
+# --- FIX: Added git to the final stage for ComfyUI-Manager ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync \
+    curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
