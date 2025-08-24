@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v8.2-WHEEL-DEPENDENCY-FIX
+# v8.3-TOGGLEABLE-FLASH-ATTENTION
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
@@ -65,7 +65,6 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/re
 RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip wheel setuptools
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-# --- FIX: Install flash-attn with --no-build-isolation to use the existing torch install ---
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall --no-build-isolation flash-attn GitPython
 
 # Install Text-Generation-WebUI dependencies
@@ -127,10 +126,13 @@ COPY entrypoint.sh /entrypoint.sh
 COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
+# --- FIX: Add the new start_comfyui.sh script ---
+COPY start_comfyui.sh /start_comfyui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /download_and_join.sh /create_modelfile.sh
+# --- FIX: Make the new script executable ---
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh
 
 # --- 5. Expose ports and set entrypoint ---
 EXPOSE 8080 8188 7860
