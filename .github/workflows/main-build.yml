@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      # Add your feature branch here to have it build automatically on push
+      - 'feature/**'
   workflow_dispatch:
 
 jobs:
@@ -24,13 +26,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
+      # --- FIX: New step to dynamically generate the Docker tag ---
+      - name: Generate Docker tag
+        id: generate_tags
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "DOCKER_TAG=latest" >> $GITHUB_OUTPUT
+          else
+            # Sanitize the branch name to make it a valid Docker tag
+            # Replaces '/' with '-' (e.g., 'feature/new-build' -> 'feature-new-build')
+            SANITIZED_BRANCH=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
+            echo "DOCKER_TAG=${SANITIZED_BRANCH}" >> $GITHUB_OUTPUT
+          fi
+
+      # --- FIX: Use the dynamically generated tag ---
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          # ✅ FIX: This now matches your actual Docker Hub repository name.
-          tags: sjpgwh/mixed-llm:latest
-          build-args: |
-            WEBUI_ARTIFACT_URL=https://github.com/${{ github.repository }}/releases/download/v0.6.23/webui-v0.6.23.tar.gz
+          tags: sjpgwh/mixed-llm:${{ steps.generate_tags.outputs.DOCKER_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
