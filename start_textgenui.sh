@@ -1,5 +1,5 @@
 #!/bin/bash
-# SCRIPT V4 - Simplified for a unified venv environment.
+# SCRIPT V5 - Updated for isolated venv environment.
 
 cd /opt/text-generation-webui
 
@@ -7,11 +7,9 @@ cd /opt/text-generation-webui
 CMD_ARGS=()
 
 # --- 2. Networking and Base Flags ---
-# FIX: Removed --now-ui as it is not a recognized argument
 CMD_ARGS+=(--listen --listen-host 0.0.0.0 --listen-port 7860 --api)
 
 # --- 3. Model and LoRA Configuration ---
-# The main models/ directory is now handled by the persistent symlink setup.
 CMD_ARGS+=(--lora-dir "${TEXTGEN_DATA_DIR}/loras")
 
 if [ -n "$MODEL_NAME" ]; then
@@ -35,5 +33,5 @@ printf " %q" "${CMD_ARGS[@]}"
 echo -e "\n----------------------------------------------------"
 
 # --- 5. Launch Server ---
-# The correct python from /opt/venv will be used thanks to the PATH variable
-exec python server.py "${CMD_ARGS[@]}"
+# --- FIX: Use the dedicated python from the textgen venv ---
+exec /opt/venv-textgen/bin/python3 server.py "${CMD_ARGS[@]}"
