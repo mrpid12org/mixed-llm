@@ -42,16 +42,18 @@ for dir in $ROOT_DIRS; do
     APP_PATH="/opt/ComfyUI/${dir}"
     WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
 
+    # Create the workspace directory first
+    mkdir -p "${WORKSPACE_PATH}"
+    chown -R root:root "${WORKSPACE_PATH}"
+
     # Migrate pre-installed custom nodes on first run
     if [ "$dir" == "custom_nodes" ] && [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ] && [ -n "$(ls -A "${APP_PATH}")" ]; then
         echo "--- Migrating pre-installed ComfyUI custom nodes to workspace... ---"
-        mkdir -p "${WORKSPACE_PATH}"
-        cp -aT "${APP_PATH}/" "${WORKSPACE_PATH}/"
+        rsync -a --chown=root:root "${APP_PATH}/" "${WORKSPACE_PATH}/"
     fi
 
     # Create the symlink
     rm -rf "${APP_PATH}"
-    mkdir -p "${WORKSPACE_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 
@@ -59,10 +61,13 @@ done
 for dir in $MODEL_SUBDIRS; do
     APP_PATH="/opt/ComfyUI/models/${dir}"
     WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
-    
+
+    # Create the workspace directory first and set permissions
+    mkdir -p "${WORKSPACE_PATH}"
+    chown -R root:root "${WORKSPACE_PATH}"
+
     # Create the symlink
     rm -rf "${APP_PATH}"
-    mkdir -p "${WORKSPACE_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- ComfyUI persistence configured. ---"
@@ -80,7 +85,7 @@ for dir in $TEXTGEN_DIRS_TO_PERSIST; do
     if [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ]; then
         rm -rf "${APP_PATH}"
     fi
-    
+
     mkdir -p "${WORKSPACE_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
