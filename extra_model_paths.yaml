@@ -1,15 +1,26 @@
 # This file tells ComfyUI where to find models stored in the persistent /workspace volume.
 # All paths should point to the subdirectories inside /workspace/comfyui/
 comfyui:
+  animatediff_models: /workspace/comfyui/animatediff_models
+  animatediff_motion_lora: /workspace/comfyui/animatediff_motion_lora
   checkpoints: /workspace/comfyui/checkpoints
-  unet: /workspace/comfyui/unet
-  vae: /workspace/comfyui/vae
   clip: /workspace/comfyui/clip
-  loras: /workspace/comfyui/loras
-  t5: /workspace/comfyui/t5
+  clip_vision: /workspace/comfyui/clip_vision
+  configs: /workspace/comfyui/configs
   controlnet: /workspace/comfyui/controlnet
+  custom_nodes: /workspace/comfyui/custom_nodes
+  diffusers: /workspace/comfyui/diffusers
+  diffusion_models: /workspace/comfyui/diffusion_models
   embeddings: /workspace/comfyui/embeddings
-  hypernetworks: /workspace/comfyui/hypernetworks
-  style_models: /workspace/comfyui/style_models
-  upscale_models: /workspace/comfyui/upscale_models
   gligen: /workspace/comfyui/gligen
+  hypernetworks: /workspace/comfyui/hypernetworks
+  ipadapter: /workspace/comfyui/ipadapter
+  loras: /workspace/comfyui/loras
+  photomaker: /workspace/comfyui/photomaker
+  style_models: /workspace/comfyui/style_models
+  t5: /workspace/comfyui/t5
+  text_encoders: /workspace/comfyui/text_encoders
+  unet: /workspace/comfyui/unet
+  upscale_models: /workspace/comfyui/upscale_models
+  vae: /workspace/comfyui/vae
+  workflows: /workspace/comfyui/workflows
