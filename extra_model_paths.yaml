@@ -1,4 +1,5 @@
 # This file tells ComfyUI where to find models stored in the persistent /workspace volume.
+# All paths should point to the subdirectories inside /workspace/comfyui/
 comfyui:
   checkpoints: /workspace/comfyui/checkpoints
   unet: /workspace/comfyui/unet
@@ -9,3 +10,6 @@ comfyui:
   controlnet: /workspace/comfyui/controlnet
   embeddings: /workspace/comfyui/embeddings
   hypernetworks: /workspace/comfyui/hypernetworks
+  style_models: /workspace/comfyui/style_models
+  upscale_models: /workspace/comfyui/upscale_models
+  gligen: /workspace/comfyui/gligen
