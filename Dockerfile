@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v8.0-FINAL-FIX
+# v8.1-NO-BUILD-ISOLATION-FIX
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
@@ -65,8 +65,8 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/re
 RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-# --- FIX: Force re-install flash-attn and install GitPython in the ComfyUI venv ---
-RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall flash-attn GitPython
+# --- FIX: Install flash-attn with --no-build-isolation to use the existing torch install ---
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall --no-build-isolation flash-attn GitPython
 
 # Install Text-Generation-WebUI dependencies
 RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
