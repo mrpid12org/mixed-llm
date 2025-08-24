@@ -28,33 +28,41 @@ echo "--- Open WebUI persistence configured. ---"
 echo "--- Ensuring ComfyUI data is persistent... ---"
 ln -sf /etc/comfyui_model_paths.yaml "/opt/ComfyUI/extra_model_paths.yaml"
 
-# --- FIX: Re-added 'custom_nodes' to the persistence list with correct pathing ---
-COMFYUI_DIRS_TO_PERSIST="animatediff_models animatediff_motion_lora checkpoints clip clip_vision configs controlnet custom_nodes diffusers diffusion_models embeddings gligen hypernetworks ipadapter loras photomaker style_models t5 text_encoders unet upscale_models vae workflows input output"
-for dir in $COMFYUI_DIRS_TO_PERSIST; do
-    # Default path for models
-    APP_MODEL_PATH="/opt/ComfyUI/models/${dir}"
-    # Specify non-model paths
-    if [ "$dir" == "input" ] || [ "$dir" == "output" ] || [ "$dir" == "workflows" ] || [ "$dir" == "custom_nodes" ]; then
-      APP_MODEL_PATH="/opt/ComfyUI/${dir}"
-    fi
-    
+# --- FIX: Simplified and corrected the symlink logic for all ComfyUI directories ---
+# Define which directories are in the root of /opt/ComfyUI vs. in /opt/ComfyUI/models
+ROOT_DIRS="input output custom_nodes workflows"
+MODEL_SUBDIRS="animatediff_models animatediff_motion_lora checkpoints clip clip_vision configs controlnet diffusers diffusion_models embeddings gligen hypernetworks ipadapter loras photomaker style_models t5 text_encoders unet upscale_models vae"
+
+# Process root directories
+for dir in $ROOT_DIRS; do
+    APP_PATH="/opt/ComfyUI/${dir}"
     WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
 
-    if [ -d "${APP_MODEL_PATH}" ] && [ ! -L "${APP_MODEL_PATH}" ]; then
-        # Before removing the directory, move any pre-installed custom nodes to the workspace
-        if [ "$dir" == "custom_nodes" ] && [ -n "$(ls -A "${APP_MODEL_PATH}")" ]; then
-          echo "--- Migrating pre-installed ComfyUI custom nodes to workspace... ---"
-          mkdir -p "${WORKSPACE_PATH}"
-          cp -rT "${APP_MODEL_PATH}/" "${WORKSPACE_PATH}/"
-        fi
-        rm -rf "${APP_MODEL_PATH}"
+    # Migrate pre-installed custom nodes on first run
+    if [ "$dir" == "custom_nodes" ] && [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ] && [ -n "$(ls -A "${APP_PATH}")" ]; then
+        echo "--- Migrating pre-installed ComfyUI custom nodes to workspace... ---"
+        mkdir -p "${WORKSPACE_PATH}"
+        cp -rT "${APP_PATH}/" "${WORKSPACE_PATH}/"
     fi
-    
+
+    # Create the symlink
+    rm -rf "${APP_PATH}"
     mkdir -p "${WORKSPACE_PATH}"
-    mkdir -p "$(dirname "${APP_MODEL_PATH}")"
-    ln -sf "${WORKSPACE_PATH}" "${APP_MODEL_PATH}"
+    ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
+done
+
+# Process model subdirectories
+for dir in $MODEL_SUBDIRS; do
+    APP_PATH="/opt/ComfyUI/models/${dir}"
+    WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
+    
+    # Create the symlink
+    rm -rf "${APP_PATH}"
+    mkdir -p "${WORKSPACE_PATH}"
+    ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- ComfyUI persistence configured. ---"
+
 
 # --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
@@ -73,6 +81,7 @@ for dir in $TEXTGEN_DIRS_TO_PERSIST; do
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- Text-Generation-WebUI persistence configured. ---"
+
 
 # --- 4. Start All Services via Supervisor ---
 SUPERVISOR_CONF="/etc/supervisor/conf.d/all-services.conf"
