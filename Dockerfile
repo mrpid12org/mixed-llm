@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v8.3-TOGGLEABLE-FLASH-ATTENTION
+# v8.4-LLM-WEB-SEARCH
 
 # =====================================================================================
 # STAGE 1: Asset Fetching
@@ -51,7 +51,10 @@ COPY --from=webui-builder /app /app
 COPY --from=comfyui-assets /opt/ComfyUI /opt/ComfyUI
 COPY --from=text-generation-webui-assets /opt/text-generation-webui /opt/text-generation-webui
 
-# --- 3. Create and Install Dependencies for ISOLATED Environments ---
+# --- 3. Install Text-Gen-WebUI Extensions ---
+RUN git clone https://github.com/mamei16/LLM_Web_search.git /opt/text-generation-webui/extensions/LLM_Web_search
+
+# --- 4. Create and Install Dependencies for ISOLATED Environments ---
 RUN python3 -m venv /opt/venv-webui
 RUN python3 -m venv /opt/venv-comfyui
 RUN python3 -m venv /opt/venv-textgen
@@ -72,8 +75,11 @@ RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
+# --- FIX: Install the requirements for the web search extension ---
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
-# --- 4. Install ComfyUI Custom Nodes (into the ComfyUI venv) ---
+
+# --- 5. Install ComfyUI Custom Nodes (into the ComfyUI venv) ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
@@ -126,12 +132,10 @@ COPY entrypoint.sh /entrypoint.sh
 COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
-# --- FIX: Add the new start_comfyui.sh script ---
 COPY start_comfyui.sh /start_comfyui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
-# --- FIX: Make the new script executable ---
 RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh
 
 # --- 5. Expose ports and set entrypoint ---
