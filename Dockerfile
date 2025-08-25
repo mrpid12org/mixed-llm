@@ -97,7 +97,6 @@ FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 LABEL org.opencontainers.image.title="Mixed-LLM Stack" \
       org.opencontainers.image.version="1.0" \
       org.opencontainers.image.description="A container running Open WebUI, ComfyUI, and Text-Generation-WebUI."
-
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -136,7 +135,10 @@ COPY start_comfyui.sh /start_comfyui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh
+# --- FIX: Added the missing script file ---
+COPY on_demand_model_loader.sh /on_demand_model_loader.sh
+# --- FIX: Made the new script executable ---
+RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh /on_demand_model_loader.sh
 
 # --- 5. Expose ports and set entrypoint ---
 EXPOSE 8080 8188 7860
