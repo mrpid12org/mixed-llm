@@ -4,12 +4,13 @@
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
 # =====================================================================================
-# --- NEW: Compile llama.cpp tools in this stage ---
+# --- FIX: Updated the build process from 'make' to 'cmake' for llama.cpp ---
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS llama-cpp-builder
 RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake
 RUN git clone https://github.com/ggerganov/llama.cpp.git
 WORKDIR /llama.cpp
-RUN make gguf-split
+# Create a build directory and run cmake, then make
+RUN mkdir build && cd build && cmake .. && make gguf-split
 
 FROM alpine/git:latest AS openwebui-assets
 RUN apk add --no-cache curl
@@ -116,7 +117,7 @@ ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
-ENV COMFYUI_URL="http://127.0.0.1:8188"
+ENV COMFYUI_URL="http://1227.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
@@ -137,7 +138,8 @@ COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
-COPY --from=llama-cpp-builder /llama.cpp/gguf-split /usr/local/bin/gguf-split
+# --- FIX: Copy the compiled tool from its new location inside the 'build' directory ---
+COPY --from=llama-cpp-builder /llama.cpp/build/bin/gguf-split /usr/local/bin/gguf-split
 
 
 # --- 3. Install Ollama ---
