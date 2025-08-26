@@ -4,11 +4,14 @@
 # =====================================================================================
 # STAGE 1: Asset Fetching
 # =====================================================================================
+# --- MODIFIED: Switched from a pinned version to the latest main branch for Open WebUI ---
 FROM alpine/git:latest AS openwebui-assets
 RUN apk add --no-cache curl
 WORKDIR /app
-RUN git clone --depth=1 --branch v0.6.23 https://github.com/open-webui/open-webui.git .
-RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/v0.6.23/CHANGELOG.md
+# --- CHANGE: Removed '--branch v0.6.23' to clone the latest version from the default branch ---
+RUN git clone --depth=1 https://github.com/open-webui/open-webui.git .
+# --- CHANGE: Switched to fetching the changelog from the 'main' branch ---
+RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/main/CHANGELOG.md
 
 FROM alpine/git:latest AS comfyui-assets
 WORKDIR /opt
@@ -106,7 +109,7 @@ ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
 ENV COMFYUI_URL="http://127.0.0.1:8188"
-ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
+ENV OLLAMA_BASE_URL="http://1.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
