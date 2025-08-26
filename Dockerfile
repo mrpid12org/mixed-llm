@@ -88,7 +88,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd ComfyUI-Manager && \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
-# --- NEW: Clean up the builder stage to reduce cache size ---
+# --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -118,6 +118,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# --- Install pip and the RunPod helper library for SSH functionality ---
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN pip3 install runpod
+
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
 COPY --from=builder /opt/venv-comfyui /opt/venv-comfyui
@@ -140,7 +145,21 @@ COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
 COPY on_demand_model_loader.sh /on_demand_model_loader.sh
-RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh /on_demand_model_loader.sh
+# --- ADDED: Copy the new multi-part download script ---
+COPY download_multi_part.sh /download_multi_part.sh
+
+# --- Make all scripts executable ---
+RUN chmod +x \
+    /entrypoint.sh \
+    /sync_models.sh \
+    /idle_shutdown.sh \
+    /start_textgenui.sh \
+    /start_comfyui.sh \
+    /download_and_join.sh \
+    /create_modelfile.sh \
+    /on_demand_model_loader.sh \
+    /download_multi_part.sh # --- ADDED: Make the new script executable
+
 
 # --- 5. Expose ports and set entrypoint ---
 EXPOSE 8080 8188 7860
