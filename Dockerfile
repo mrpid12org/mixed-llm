@@ -65,17 +65,18 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir torch torchvision 
 RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 
 # Install ComfyUI dependencies
+# --- FIX: Corrected path from /opt-venv-comfyui to /opt/venv-comfyui ---
 RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip wheel setuptools
-RUN /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-RUN /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
-RUN /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall --no-build-isolation flash-attn GitPython
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
+RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall --no-build-isolation flash-attn GitPython
 
 # Install Text-Generation-WebUI dependencies
-RUN /opt-venv-textgen/bin/python3 -m pip install --upgrade pip
-RUN /opt-venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-RUN /opt-venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
-RUN /opt-venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
-RUN /opt-venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
+RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
+RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
 
 # --- 5. Install ComfyUI Custom Nodes (into the ComfyUI venv) ---
@@ -86,7 +87,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
-    /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
 # --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
