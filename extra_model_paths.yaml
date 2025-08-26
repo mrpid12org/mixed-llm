@@ -23,4 +23,3 @@ comfyui:
   unet: /workspace/comfyui/unet
   upscale_models: /workspace/comfyui/upscale_models
   vae: /workspace/comfyui/vae
-  workflows: /workspace/comfyui/workflows
