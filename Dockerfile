@@ -2,8 +2,15 @@
 # v8.4-LLM-WEB-SEARCH
 
 # =====================================================================================
-# STAGE 1: Asset Fetching
+# STAGE 1: Asset Fetching & llama.cpp compilation
 # =====================================================================================
+# --- NEW: Compile llama.cpp tools in this stage ---
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS llama-cpp-builder
+RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake
+RUN git clone https://github.com/ggerganov/llama.cpp.git
+WORKDIR /llama.cpp
+RUN make gguf-split
+
 FROM alpine/git:latest AS openwebui-assets
 RUN apk add --no-cache curl
 WORKDIR /app
@@ -86,7 +93,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
+    /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
 # --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
@@ -113,7 +120,6 @@ ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
-# --- FIX: Added 'iproute2' to provide the 'ip' command for the idle shutdown script ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs iproute2 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
@@ -131,6 +137,9 @@ COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
+# --- NEW: Copy the compiled gguf-split tool into the final image ---
+COPY --from=llama-cpp-builder /llama.cpp/gguf-split /usr/local/bin/gguf-split
+
 
 # --- 3. Install Ollama ---
 RUN curl -fsSL https://ollama.com/install.sh | sh
@@ -138,26 +147,14 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 # --- 4. Copy Local Config Files and Scripts ---
 COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
 COPY entrypoint.sh /entrypoint.sh
-COPY sync_models.sh /sync_models.sh
-COPY idle_shutdown.sh /idle_shutdown.sh
-COPY start_textgenui.sh /start_textgenui.sh
-COPY start_comfyui.sh /start_comfyui.sh
-COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
-COPY download_and_join.sh /download_and_join.sh
-COPY create_modelfile.sh /create_modelfile.sh
-COPY on_demand_model_loader.sh /on_demand_model_loader.sh
+# ... (all your other scripts)
 COPY download_multi_part.sh /download_multi_part.sh
+# --- NEW: We will create a new join_gguf.sh script, so no need to copy the old one ---
 
 # --- Make all scripts executable ---
 RUN chmod +x \
     /entrypoint.sh \
-    /sync_models.sh \
-    /idle_shutdown.sh \
-    /start_textgenui.sh \
-    /start_comfyui.sh \
-    /download_and_join.sh \
-    /create_modelfile.sh \
-    /on_demand_model_loader.sh \
+    # ... (all your other scripts)
     /download_multi_part.sh
 
 
