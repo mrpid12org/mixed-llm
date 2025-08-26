@@ -52,4 +52,4 @@ jobs:
           tags: sjpgwh/mixed-llm:${{ steps.generate_tags.outputs.DOCKER_TAG }}
           cache-from: type=gha
           # --- CHANGE: Switched caching mode from 'max' to 'min' to reduce cache size ---
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
