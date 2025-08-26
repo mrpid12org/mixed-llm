@@ -7,7 +7,6 @@ chown -R root:root /workspace
 echo "--- Permissions set. ---"
 
 echo "--- Clearing previous session logs... ---"
-# --- CHANGE: Added command to remove old log files at startup ---
 rm -f /workspace/logs/*
 mkdir -p /workspace/logs
 
@@ -44,17 +43,14 @@ for dir in $ROOT_DIRS; do
     APP_PATH="/opt/ComfyUI/${dir}"
     WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
 
-    # Create the workspace directory first
     mkdir -p "${WORKSPACE_PATH}"
     chown -R root:root "${WORKSPACE_PATH}"
 
-    # Migrate pre-installed custom nodes on first run
     if [ "$dir" == "custom_nodes" ] && [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ] && [ -n "$(ls -A "${APP_PATH}")" ]; then
         echo "--- Migrating pre-installed ComfyUI custom nodes to workspace... ---"
         rsync -a --chown=root:root "${APP_PATH}/" "${WORKSPACE_PATH}/"
     fi
 
-    # Create the symlink
     rm -rf "${APP_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
@@ -64,33 +60,29 @@ for dir in $MODEL_SUBDIRS; do
     APP_PATH="/opt/ComfyUI/models/${dir}"
     WORKSPACE_PATH="${COMFYUI_MODELS_DIR}/${dir}"
 
-    # Create the workspace directory first and set permissions
     mkdir -p "${WORKSPACE_PATH}"
     chown -R root:root "${WORKSPACE_PATH}"
 
-    # Create the symlink
     rm -rf "${APP_PATH}"
     ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
 done
 echo "--- ComfyUI persistence configured. ---"
 
 
-# --- 3. Text-Generation-WebUI Persistent Data Setup ---
+# --- 3. Text-Generation-WebUI Persistent Data Setup (FIXED) ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
+APP_USER_DATA_PATH="/opt/text-generation-webui/user_data"
+WORKSPACE_PATH="${TEXTGEN_DATA_DIR}"
+
+# Ensure all expected subdirectories exist in the persistent volume first
 TEXTGEN_DIRS_TO_PERSIST="characters extensions loras models presets training mmproj logs instruction-templates"
 for dir in $TEXTGEN_DIRS_TO_PERSIST; do
-    APP_PATH="/opt/text-generation-webui/user_data/${dir}"
-    WORKSPACE_PATH="${TEXTGEN_DATA_DIR}/${dir}"
-
-    mkdir -p "$(dirname "${APP_PATH}")"
-
-    if [ -d "${APP_PATH}" ] && [ ! -L "${APP_PATH}" ]; then
-        rm -rf "${APP_PATH}"
-    fi
-
-    mkdir -p "${WORKSPACE_PATH}"
-    ln -sf "${WORKSPACE_PATH}" "${APP_PATH}"
+    mkdir -p "${WORKSPACE_PATH}/${dir}"
 done
+
+# Remove the original user_data directory and link the entire persistent data directory to it
+rm -rf "${APP_USER_DATA_PATH}"
+ln -s "${WORKSPACE_PATH}" "${APP_USER_DATA_PATH}"
 echo "--- Text-Generation-WebUI persistence configured. ---"
 
 
