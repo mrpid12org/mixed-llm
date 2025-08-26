@@ -4,13 +4,10 @@
 # =====================================================================================
 # STAGE 1: Asset Fetching
 # =====================================================================================
-# --- MODIFIED: Switched from a pinned version to the latest main branch for Open WebUI ---
 FROM alpine/git:latest AS openwebui-assets
 RUN apk add --no-cache curl
 WORKDIR /app
-# --- CHANGE: Removed '--branch v0.6.23' to clone the latest version from the default branch ---
 RUN git clone --depth=1 https://github.com/open-webui/open-webui.git .
-# --- CHANGE: Switched to fetching the changelog from the 'main' branch ---
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/main/CHANGELOG.md
 
 FROM alpine/git:latest AS comfyui-assets
@@ -78,7 +75,6 @@ RUN /opt/venv-textgen/bin/python3 -m pip install --upgrade pip
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/requirements/full/requirements.txt
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
-# --- FIX: Install the requirements for the web search extension ---
 RUN /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
 
@@ -91,6 +87,11 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
+
+# --- NEW: Clean up the builder stage to reduce cache size ---
+RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # =====================================================================================
 # STAGE 4: The Final Image
@@ -109,7 +110,7 @@ ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
 ENV COMFYUI_URL="http://127.0.0.1:8188"
-ENV OLLAMA_BASE_URL="http://1.0.0.1:11434"
+ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -138,9 +139,7 @@ COPY start_comfyui.sh /start_comfyui.sh
 COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
-# --- FIX: Added the missing script file ---
 COPY on_demand_model_loader.sh /on_demand_model_loader.sh
-# --- FIX: Made the new script executable ---
 RUN chmod +x /entrypoint.sh /sync_models.sh /idle_shutdown.sh /start_textgenui.sh /start_comfyui.sh /download_and_join.sh /create_modelfile.sh /on_demand_model_loader.sh
 
 # --- 5. Expose ports and set entrypoint ---
