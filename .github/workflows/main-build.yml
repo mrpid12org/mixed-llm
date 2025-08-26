@@ -17,6 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # --- FIX: Added step to automatically clean up the runner before a build ---
       - name: Clean up Docker resources
         run: |
           docker system prune -af
@@ -51,5 +52,5 @@ jobs:
           push: true
           tags: sjpgwh/mixed-llm:${{ steps.generate_tags.outputs.DOCKER_TAG }}
           cache-from: type=gha
-          # --- CHANGE: Switched caching mode from 'max' to 'min' to reduce cache size ---
+          # --- Reverted to 'max' mode for more effective caching with the optimized Dockerfile ---
           cache-to: type=gha,mode=max
