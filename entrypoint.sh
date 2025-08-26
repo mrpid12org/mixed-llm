@@ -7,6 +7,8 @@ chown -R root:root /workspace
 echo "--- Permissions set. ---"
 
 echo "--- Clearing previous session logs... ---"
+# --- CHANGE: Added command to remove old log files at startup ---
+rm -f /workspace/logs/*
 mkdir -p /workspace/logs
 
 # --- Ensure ALL persistent directories are created at startup ---
