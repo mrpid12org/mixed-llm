@@ -1,5 +1,5 @@
 # --- BUILD VERSION IDENTIFIER ---
-# v8.4-LLM-WEB-SEARCH
+# v8.5-GGUF-Tools
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -93,7 +93,7 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     cd ComfyUI-Manager && \
-    /opt-venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
 # --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
@@ -137,7 +137,6 @@ COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
-# --- NEW: Copy the compiled gguf-split tool into the final image ---
 COPY --from=llama-cpp-builder /llama.cpp/gguf-split /usr/local/bin/gguf-split
 
 
@@ -147,15 +146,29 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 # --- 4. Copy Local Config Files and Scripts ---
 COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
 COPY entrypoint.sh /entrypoint.sh
-# ... (all your other scripts)
+COPY sync_models.sh /sync_models.sh
+COPY idle_shutdown.sh /idle_shutdown.sh
+COPY start_textgenui.sh /start_textgenui.sh
+COPY start_comfyui.sh /start_comfyui.sh
+COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
+COPY download_and_join.sh /download_and_join.sh
+COPY create_modelfile.sh /create_modelfile.sh
+COPY on_demand_model_loader.sh /on_demand_model_loader.sh
 COPY download_multi_part.sh /download_multi_part.sh
-# --- NEW: We will create a new join_gguf.sh script, so no need to copy the old one ---
+COPY join_gguf.sh /join_gguf.sh
 
 # --- Make all scripts executable ---
 RUN chmod +x \
     /entrypoint.sh \
-    # ... (all your other scripts)
-    /download_multi_part.sh
+    /sync_models.sh \
+    /idle_shutdown.sh \
+    /start_textgenui.sh \
+    /start_comfyui.sh \
+    /download_and_join.sh \
+    /create_modelfile.sh \
+    /on_demand_model_loader.sh \
+    /download_multi_part.sh \
+    /join_gguf.sh
 
 
 # --- 5. Expose ports and set entrypoint ---
