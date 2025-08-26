@@ -65,7 +65,6 @@ RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir torch torchvision 
 RUN /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /app/backend/requirements.txt -U
 
 # Install ComfyUI dependencies
-# --- FIX: Corrected path from /opt-venv-comfyui to /opt/venv-comfyui ---
 RUN /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip wheel setuptools
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 RUN /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /opt/ComfyUI/requirements.txt
@@ -114,8 +113,9 @@ ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
+# --- FIX: Added 'iproute2' to provide the 'ip' command for the idle shutdown script ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs \
+    curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs iproute2 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
