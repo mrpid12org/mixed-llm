@@ -8,7 +8,7 @@
 # =====================================================================================
 # --- FIX: Updated the build process from 'make' to 'cmake' for llama.cpp ---added libcurl too
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS llama-cpp-builder
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     git build-essential cmake libcurl4-openssl-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -19,7 +19,7 @@ RUN mkdir build && cd build && cmake .. && make -j"$(nproc)" llama-gguf-split
 FROM alpine/git:2.49.1 AS openwebui-assets
 RUN apk add --no-cache curl
 WORKDIR /app
-RUN git clone --depth=1 https://github.com/open-webui/open-webui.git . && rm -rf .git
+RUN git clone --depth=1 https://github.com/open-webui/open-webui.git .
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/main/CHANGELOG.md
 
 FROM alpine/git:2.49.1 AS comfyui-assets
@@ -53,7 +53,7 @@ ENV PIP_ROOT_USER_ACTION=ignore
 ENV PYTHON_VERSION=3.11
 
 # --- 1. Install System Build Dependencies ---
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     git curl build-essential aria2 cmake python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-venv \
@@ -132,18 +132,18 @@ ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
-ENV COMFYUI_URL="http://1227.0.0.1:8188"
+ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs iproute2 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # --- Install pip and the RunPod helper library for SSH functionality ---
-RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
