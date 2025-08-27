@@ -175,6 +175,7 @@ COPY create_modelfile.sh /create_modelfile.sh
 COPY on_demand_model_loader.sh /on_demand_model_loader.sh
 COPY download_multi_part.sh /download_multi_part.sh
 COPY join_gguf.sh /join_gguf.sh
+COPY download_and_join_multipart_gguf.sh /download_and_join_multipart_gguf.sh
 
 # --- Make all scripts executable ---
 RUN chmod +x \
@@ -187,7 +188,8 @@ RUN chmod +x \
     /create_modelfile.sh \
     /on_demand_model_loader.sh \
     /download_multi_part.sh \
-    /join_gguf.sh
+    /join_gguf.sh \
+    /download_and_join_multipart_gguf.sh
 
 
 # --- 5. Expose ports and set entrypoint ---
