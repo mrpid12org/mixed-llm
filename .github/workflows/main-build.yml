@@ -11,7 +11,7 @@ on:
 jobs:
   build-and-push:
     name: Build and Push Main Image
-    runs-on: self-hosted
+    runs-on: buildjet-8vcpu-ubuntu-2204
 
     steps:
       - name: Check out repository
