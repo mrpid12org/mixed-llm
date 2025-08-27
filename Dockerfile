@@ -4,12 +4,12 @@
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
 # =====================================================================================
-# --- FIX: Updated the build process from 'make' to 'cmake' for llama.cpp ---
+# --- FIX: Updated the build process from 'make' to 'cmake' for llama.cpp ---added libcurl too
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS llama-cpp-builder
-RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git build-essential cmake libcurl4-openssl-dev
 RUN git clone https://github.com/ggerganov/llama.cpp.git
 WORKDIR /llama.cpp
-# Create a build directory and run cmake, then make
 RUN mkdir build && cd build && cmake .. && make gguf-split
 
 FROM alpine/git:latest AS openwebui-assets
