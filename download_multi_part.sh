@@ -73,7 +73,9 @@ done
 
 # --- 5. Join All Parts ---
 # Sort the parts numerically to ensure correct order before joining
-IFS=$'\n' SORTED_PARTS=($(sort <<<"${DOWNLOADED_PARTS[*]}"))
+IFS=$'\n' mapfile -t SORTED_PARTS < <(
+  printf '%s\n' "${DOWNLOADED_PARTS[@]}" | sort -t '_' -k2,2n
+)
 unset IFS
 
 echo
