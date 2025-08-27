@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git build-essential cmake libcurl4-openssl-dev
 RUN git clone https://github.com/ggerganov/llama.cpp.git
 WORKDIR /llama.cpp
-RUN mkdir build && cd build && cmake .. && make gguf-split
+RUN mkdir build && cd build && cmake .. && make -j"$(nproc)" llama-gguf-split
 
 FROM alpine/git:latest AS openwebui-assets
 RUN apk add --no-cache curl
@@ -138,8 +138,8 @@ COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
-# --- FIX: Copy the compiled tool from its new location inside the 'build' directory ---
-COPY --from=llama-cpp-builder /llama.cpp/build/bin/gguf-split /usr/local/bin/gguf-split
+# --- FIX: Copy the compiled tool from its new location inside the correct 'build' directory ---
+COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/bin/gguf-split
 
 
 # --- 3. Install Ollama ---
