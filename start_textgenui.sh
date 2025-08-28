@@ -1,5 +1,7 @@
 #!/bin/bash
-# SCRIPT V10 - Adds --debug (toggle via $DEBUG) and optional file logging ($LOG_FILE).
+
+# SCRIPT V11 - Adds optional verbose logging via $DEBUG and optional file logging ($LOG_FILE).
+
 set -Eeuo pipefail
 
 cd /opt/text-generation-webui || exit 1
@@ -7,8 +9,8 @@ cd /opt/text-generation-webui || exit 1
 # Allow Gradio to access cached uploads like image attachments
 export GRADIO_ALLOWED_PATH=/workspace/text-generation-webui
 
-# Allow Gradio to access cached uploads like image attachments
-export GRADIO_ALLOWED_PATH=/workspace/text-generation-webui
+# Clear any preset commandline arg environment variables that may inject unsupported flags
+unset COMMANDLINE_ARGS CLI_ARGS
 
 # --- 1. Build Argument Array ---
 CMD_ARGS=()
@@ -41,9 +43,9 @@ if [ -n "${NUM_EXPERTS_PER_TOKEN:-}" ]; then
   CMD_ARGS+=(--num-experts-per-token "$NUM_EXPERTS_PER_TOKEN")
 fi
 
-# --- 6. Debug toggle (ON by default) ---
+# --- 6. Verbose toggle (ON by default) ---
 if [ "${DEBUG:-1}" = "1" ]; then
-  CMD_ARGS+=(--debug)
+  CMD_ARGS+=(--verbose)
 fi
 
 echo "--- Starting Text-Generation-WebUI with arguments: ---"

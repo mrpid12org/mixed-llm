@@ -32,6 +32,16 @@ fi
 rm -rf "${COMFYUI_VENV_PATH}"
 ln -s "${COMFYUI_VENV_PERSIST}" "${COMFYUI_VENV_PATH}"
 
+# Ensure required ComfyUI node dependencies exist in the persistent venv
+COMFYUI_PIP="${COMFYUI_VENV_PATH}/bin/pip"
+if ! "${COMFYUI_PIP}" show sam2 > /dev/null 2>&1; then
+    echo "--- Installing Impact Pack dependencies into ComfyUI venv ---"
+    "${COMFYUI_PIP}" install --no-cache-dir \
+        ultralytics piexif dill \
+        'git+https://github.com/facebookresearch/segment-anything.git' \
+        'git+https://github.com/facebookresearch/sam2'
+fi
+
 
 # --- 1. Open WebUI Persistent Data Setup ---
 echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
