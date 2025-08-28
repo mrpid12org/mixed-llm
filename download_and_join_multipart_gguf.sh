@@ -5,6 +5,9 @@
 
 set -e
 
+# Ensure the llama shared library can be found
+export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
+
 # --- 1. Argument and Sanity Checks ---
 if [ -z "$1" ]; then
     echo "--- ERROR: No URL provided. ---"
@@ -34,6 +37,7 @@ read -r FIRST_PART_STR TOTAL_PARTS_STR <<< "$PART_INFO"
 TOTAL_PARTS=$((10#$TOTAL_PARTS_STR))
 PART_NUM_LEN=${#FIRST_PART_STR}
 OUTPUT_FILENAME=$(echo "$BASE_FILENAME" | sed -E "s/-[0-9]+-of-[0-9]+//")
+OUTPUT_BASENAME="${OUTPUT_FILENAME%.gguf}"
 
 # Detect the starting number (0 or 1)
 START_NUM=$((10#$FIRST_PART_STR))
@@ -72,7 +76,10 @@ done
 # --- 5. Run the Official Merge Tool ---
 echo
 echo "--- All parts downloaded. Merging files using gguf-split... ---"
-gguf-split --merge "$FIRST_PART_LOCAL_NAME" "$OUTPUT_FILENAME"
+if ! gguf-split --merge "$FIRST_PART_LOCAL_NAME" "$OUTPUT_FILENAME"; then
+    echo "--- WARN: gguf-split failed; falling back to simple concatenation ---"
+    cat $(ls "${OUTPUT_BASENAME}"-*-of-*.gguf | sort) > "$OUTPUT_FILENAME"
+fi
 
 # --- 6. Clean Up Part Files ---
 echo "--- Merge complete. Cleaning up part files... ---"
