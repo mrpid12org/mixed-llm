@@ -110,7 +110,9 @@ RUN cd /opt/ComfyUI/custom_nodes && \
 # --- FIX: Pre-install dependencies for Impact Pack and other common nodes ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir \
-    ultralytics piexif dill 'git+https://github.com/facebookresearch/segment-anything.git'
+    ultralytics piexif dill \
+    'git+https://github.com/facebookresearch/segment-anything.git' \
+    'git+https://github.com/facebookresearch/sam2'
 
 # --- 8. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/ComfyUI/.git /opt/text-generation-webui/.git
