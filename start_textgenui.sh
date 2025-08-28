@@ -1,7 +1,10 @@
 #!/bin/bash
-# SCRIPT V7 - Remove unsupported Gradio upload directory option
+# SCRIPT V8 - Link persistent user data and remove unsupported Gradio upload directory option
 
 cd /opt/text-generation-webui || exit
+# Link persistent user data for uploads and cache
+mkdir -p "${TEXTGEN_DATA_DIR}"
+ln -sfn "${TEXTGEN_DATA_DIR}" user_data
 
 # --- 1. Build Argument Array ---
 CMD_ARGS=()
