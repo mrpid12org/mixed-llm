@@ -108,6 +108,10 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd ComfyUI-Manager && \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
+# Pre-install dependencies for common community node packs
+RUN --mount=type=cache,target=/root/.cache/pip \
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir ultralytics piexif
+
 # --- 8. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/ComfyUI/.git /opt/text-generation-webui/.git
 

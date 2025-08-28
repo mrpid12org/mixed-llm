@@ -8,7 +8,7 @@ CMD_ARGS=(
     "--listen" "0.0.0.0" \
     "--port" "8188" \
     "--preview-method" "auto" \
-    "--extra-model-paths-config" "/etc/comfyui_model_paths.yaml" \
+    "--extra-model-paths-config" "/opt/ComfyUI/extra_model_paths.yaml" \
     "--input-directory" "/opt/ComfyUI/input" \
     "--output-directory" "/opt/ComfyUI/output"
 )
