@@ -6,7 +6,6 @@
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
 # =====================================================================================
-# --- FIX: Updated the build process from 'make' to 'cmake' for llama.cpp ---added libcurl too
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04 AS llama-cpp-builder
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -14,7 +13,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     rm -rf /var/lib/apt/lists/*
 RUN git clone --depth=1 https://github.com/ggerganov/llama.cpp.git
 WORKDIR /llama.cpp
-RUN mkdir build && cd build && cmake .. && make -j"$(nproc)" llama-gguf-split
+RUN mkdir build && cd build && cmake .. -DLLAMA_CURL=OFF && make -j"$(nproc)" llama-gguf-split
 
 FROM alpine/git:2.49.1 AS openwebui-assets
 RUN apk add --no-cache curl
@@ -98,7 +97,7 @@ RUN git clone --depth=1 https://github.com/mamei16/LLM_Web_search.git /opt/text-
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
-# --- 7. Install ComfyUI Custom Nodes (into the ComfyUI venv) ---
+# --- 7. Install ComfyUI Custom Nodes ---
 RUN cd /opt/ComfyUI/custom_nodes && \
     git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
     cd was-node-suite-comfyui && \
@@ -108,9 +107,10 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd ComfyUI-Manager && \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
-# Pre-install dependencies for common community node packs
+# --- FIX: Pre-install dependencies for Impact Pack and other common nodes ---
 RUN --mount=type=cache,target=/root/.cache/pip \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir ultralytics piexif
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir \
+    ultralytics piexif dill 'git+https://github.com/facebookresearch/segment-anything.git'
 
 # --- 8. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/ComfyUI/.git /opt/text-generation-webui/.git
@@ -146,6 +146,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# --- Install pip and the RunPod helper library for SSH functionality ---
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends python3-pip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
+
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
 COPY --from=builder /opt/venv-comfyui /opt/venv-comfyui
@@ -153,9 +159,7 @@ COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
 COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
-# --- FIX: Copy the compiled tool from its new location inside the correct 'build' directory ---
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/bin/gguf-split
-# Bring in the shared library required by gguf-split and make it discoverable at runtime
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/libllama.so* /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 RUN ldconfig
