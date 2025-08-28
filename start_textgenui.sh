@@ -1,18 +1,13 @@
 #!/bin/bash
-# SCRIPT V6 - Added persistent upload directory and optional extension.
+# SCRIPT V7 - Remove unsupported Gradio upload directory option
 
 cd /opt/text-generation-webui || exit
-
-# Create persistent upload directory
-UPLOAD_DIR="${TEXTGEN_DATA_DIR}/uploads"
-mkdir -p "$UPLOAD_DIR"
 
 # --- 1. Build Argument Array ---
 CMD_ARGS=()
 
 # --- 2. Networking and Base Flags ---
 CMD_ARGS+=(--listen --listen-host 0.0.0.0 --listen-port 7860 --api)
-CMD_ARGS+=(--gradio-upload-dir "$UPLOAD_DIR")
 
 # --- 3. Optional Extensions ---
 if [ -d "extensions/LLM_Web_search" ]; then
