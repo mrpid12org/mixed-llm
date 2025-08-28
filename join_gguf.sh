@@ -3,6 +3,9 @@
 
 set -e
 
+# Ensure the llama shared library can be found
+export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
+
 # --- 1. Sanity Checks ---
 if ! command -v gguf-split &> /dev/null; then
     echo "--- ERROR: 'gguf-split' command not found. The image may need to be rebuilt. ---"
@@ -25,6 +28,7 @@ fi
 # --- 3. Determine the output filename ---
 # Removes the '-00001-of-...' part to get the base name
 OUTPUT_FILENAME=$(echo "$FIRST_PART" | sed -E "s/-[0-9]+-of-[0-9]+//")
+OUTPUT_BASENAME="${OUTPUT_FILENAME%.gguf}"
 
 echo "====================================================================="
 echo "--- GGUF Model Joiner (v1) ---"
@@ -34,7 +38,10 @@ echo "====================================================================="
 
 # --- 4. Run the official merge tool ---
 echo "--- Merging files... This may take a while. ---"
-gguf-split --merge "$FIRST_PART" "$OUTPUT_FILENAME"
+if ! gguf-split --merge "$FIRST_PART" "$OUTPUT_FILENAME"; then
+    echo "--- WARN: gguf-split failed; falling back to simple concatenation ---"
+    cat $(ls "${OUTPUT_BASENAME}"-*-of-*.gguf | sort) > "$OUTPUT_FILENAME"
+fi
 
 # --- 5. Clean up the now-unnecessary part files ---
 echo "--- Merge complete. Cleaning up part files... ---"

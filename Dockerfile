@@ -157,6 +157,10 @@ COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
 # --- FIX: Copy the compiled tool from its new location inside the correct 'build' directory ---
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/bin/gguf-split
+# Bring in the shared library required by gguf-split and make it discoverable at runtime
+COPY --from=llama-cpp-builder /llama.cpp/build/bin/libllama.so* /usr/local/lib/
+ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
+RUN ldconfig
 
 
 # --- 3. Install Ollama ---
