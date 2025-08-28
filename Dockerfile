@@ -142,12 +142,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# --- Install pip and the RunPod helper library for SSH functionality ---
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends python3-pip && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
-
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
 COPY --from=builder /opt/venv-comfyui /opt/venv-comfyui
