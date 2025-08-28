@@ -18,6 +18,21 @@ mkdir -p "${OPENWEBUI_DATA_DIR}"
 mkdir -p "${TEXTGEN_DATA_DIR}"
 mkdir -p "/workspace/temp_gguf"
 
+# --- NEW: Persist ComfyUI virtual environment to workspace ---
+COMFYUI_VENV_PATH="/opt/venv-comfyui"
+COMFYUI_VENV_PERSIST="/workspace/comfyui/venv"
+# On the very first run (when the persistent venv doesn't exist), move the built venv into storage.
+if [ ! -d "${COMFYUI_VENV_PERSIST}" ]; then
+    if [ -d "${COMFYUI_VENV_PATH}" ]; then
+        echo "--- First run: Moving ComfyUI venv to persistent storage... ---"
+        mv "${COMFYUI_VENV_PATH}" "${COMFYUI_VENV_PERSIST}"
+    fi
+fi
+# For ALL runs, ensure the symlink from the app dir to the persistent venv is in place.
+rm -rf "${COMFYUI_VENV_PATH}"
+ln -s "${COMFYUI_VENV_PERSIST}" "${COMFYUI_VENV_PATH}"
+
+
 # --- 1. Open WebUI Persistent Data Setup ---
 echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
 if [ -d "/app/backend/data" ] && [ ! -L "/app/backend/data" ]; then
@@ -60,7 +75,7 @@ for dir in $MODEL_SUBDIRS; do
 done
 echo "--- ComfyUI persistence configured. ---"
 
-# --- 3. Text-Generation-WebUI Persistent Data Setup (FIXED) ---
+# --- 3. Text-Generation-WebUI Persistent Data Setup ---
 echo "--- Ensuring Text-Generation-WebUI data is persistent in ${TEXTGEN_DATA_DIR}... ---"
 APP_USER_DATA_PATH="/opt/text-generation-webui/user_data"
 # On first run, copy the default user_data to the persistent volume
