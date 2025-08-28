@@ -1,11 +1,14 @@
 #!/bin/bash
+
 # SCRIPT V11 - Adds optional verbose logging via $DEBUG and optional file logging ($LOG_FILE).
+
 set -Eeuo pipefail
 
 cd /opt/text-generation-webui || exit 1
 
 # Allow Gradio to access cached uploads like image attachments
 export GRADIO_ALLOWED_PATH=/workspace/text-generation-webui
+
 # Clear any preset commandline arg environment variables that may inject unsupported flags
 unset COMMANDLINE_ARGS CLI_ARGS
 
@@ -14,6 +17,7 @@ CMD_ARGS=()
 
 # --- 2. Networking and Base Flags ---
 CMD_ARGS+=(--listen --listen-host 0.0.0.0 --listen-port 7860 --api)
+CMD_ARGS+=(--gradio-allowed-path /workspace/text-generation-webui)
 
 # --- 3. Optional Extensions ---
 if [ -d "extensions/LLM_Web_search" ]; then
