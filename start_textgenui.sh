@@ -1,15 +1,25 @@
 #!/bin/bash
-# SCRIPT V5 - Updated for isolated venv environment.
+# SCRIPT V6 - Added persistent upload directory and optional extension.
 
-cd /opt/text-generation-webui
+cd /opt/text-generation-webui || exit
+
+# Create persistent upload directory
+UPLOAD_DIR="${TEXTGEN_DATA_DIR}/uploads"
+mkdir -p "$UPLOAD_DIR"
 
 # --- 1. Build Argument Array ---
 CMD_ARGS=()
 
 # --- 2. Networking and Base Flags ---
 CMD_ARGS+=(--listen --listen-host 0.0.0.0 --listen-port 7860 --api)
+CMD_ARGS+=(--gradio-upload-dir "$UPLOAD_DIR")
 
-# --- 3. Model and LoRA Configuration ---
+# --- 3. Optional Extensions ---
+if [ -d "extensions/LLM_Web_search" ]; then
+    CMD_ARGS+=(--extensions LLM_Web_search)
+fi
+
+# --- 4. Model and LoRA Configuration ---
 CMD_ARGS+=(--lora-dir "${TEXTGEN_DATA_DIR}/loras")
 
 if [ -n "$MODEL_NAME" ]; then
@@ -23,7 +33,7 @@ if [ -n "$LORA_NAMES" ]; then
     done
 fi
 
-# --- 4. Optional MoE config ---
+# --- 5. Optional MoE config ---
 if [ -n "$NUM_EXPERTS_PER_TOKEN" ]; then
     CMD_ARGS+=(--num-experts-per-token "$NUM_EXPERTS_PER_TOKEN")
 fi
@@ -32,6 +42,7 @@ echo "--- Starting Text-Generation-WebUI with arguments: ---"
 printf " %q" "${CMD_ARGS[@]}"
 echo -e "\n----------------------------------------------------"
 
-# --- 5. Launch Server ---
+# --- 6. Launch Server ---
 # --- FIX: Use the dedicated python from the textgen venv ---
 exec /opt/venv-textgen/bin/python3 server.py "${CMD_ARGS[@]}"
+
