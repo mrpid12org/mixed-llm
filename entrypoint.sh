@@ -18,6 +18,18 @@ mkdir -p "${OPENWEBUI_DATA_DIR}"
 mkdir -p "${TEXTGEN_DATA_DIR}"
 mkdir -p "/workspace/temp_gguf"
 
+# --- Persist ComfyUI virtual environment to workspace ---
+COMFYUI_VENV_PATH="/opt/venv-comfyui"
+COMFYUI_VENV_PERSIST="/workspace/venv-comfyui"
+if [ -d "${COMFYUI_VENV_PATH}" ] && [ ! -L "${COMFYUI_VENV_PATH}" ]; then
+    if [ ! -d "${COMFYUI_VENV_PERSIST}" ]; then
+        echo "--- First run detected for ComfyUI venv. Migrating to persistent storage... ---"
+        rsync -a "${COMFYUI_VENV_PATH}/" "${COMFYUI_VENV_PERSIST}/"
+    fi
+    rm -rf "${COMFYUI_VENV_PATH}"
+    ln -s "${COMFYUI_VENV_PERSIST}" "${COMFYUI_VENV_PATH}"
+fi
+
 # --- 1. Open WebUI Persistent Data Setup ---
 echo "--- Ensuring Open WebUI data is persistent in ${OPENWEBUI_DATA_DIR}... ---"
 if [ -d "/app/backend/data" ] && [ ! -L "/app/backend/data" ]; then

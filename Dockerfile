@@ -108,6 +108,10 @@ RUN cd /opt/ComfyUI/custom_nodes && \
     cd ComfyUI-Manager && \
     /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
 
+# Pre-install dependencies for common community node packs
+RUN --mount=type=cache,target=/root/.cache/pip \
+    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir ultralytics piexif
+
 # --- 8. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/ComfyUI/.git /opt/text-generation-webui/.git
 
@@ -141,12 +145,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs iproute2 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# --- Install pip and the RunPod helper library for SSH functionality ---
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends python3-pip && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
 
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
