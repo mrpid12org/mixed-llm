@@ -1,10 +1,7 @@
 #!/bin/bash
-# SCRIPT V8 - Link persistent user data and remove unsupported Gradio upload directory option
+# SCRIPT V9 - Removed redundant symlinking to fix Gradio file upload errors.
 
 cd /opt/text-generation-webui || exit
-# Link persistent user data for uploads and cache
-mkdir -p "${TEXTGEN_DATA_DIR}"
-ln -sfn "${TEXTGEN_DATA_DIR}" user_data
 
 # --- 1. Build Argument Array ---
 CMD_ARGS=()
@@ -41,6 +38,4 @@ printf " %q" "${CMD_ARGS[@]}"
 echo -e "\n----------------------------------------------------"
 
 # --- 6. Launch Server ---
-# --- FIX: Use the dedicated python from the textgen venv ---
 exec /opt/venv-textgen/bin/python3 server.py "${CMD_ARGS[@]}"
-
