@@ -2,6 +2,7 @@
 
 # --- BUILD VERSION IDENTIFIER ---
 # v8.5-GGUF-Tools
+# ComfyUI removed; only Open WebUI and Text-Generation-WebUI included
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -20,10 +21,6 @@ RUN apk add --no-cache curl
 WORKDIR /app
 RUN git clone --depth=1 https://github.com/open-webui/open-webui.git .
 RUN curl -L -o /app/CHANGELOG.md https://raw.githubusercontent.com/open-webui/open-webui/main/CHANGELOG.md
-
-FROM alpine/git:2.49.1 AS comfyui-assets
-WORKDIR /opt
-RUN git clone --depth=1 https://github.com/comfyanonymous/ComfyUI.git && rm -rf ComfyUI/.git
 
 FROM alpine/git:2.49.1 AS text-generation-webui-assets
 WORKDIR /opt
@@ -59,37 +56,33 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# --- Install shared PyTorch globally ---
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m ensurepip && \
+    pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
 # --- 2. Prepare dependency files ---
 COPY --from=webui-builder /app/backend/requirements.txt /tmp/req-webui.txt
-COPY --from=comfyui-assets /opt/ComfyUI/requirements.txt /tmp/req-comfyui.txt
 COPY --from=text-generation-webui-assets /opt/text-generation-webui/requirements /tmp/req-textgen
+RUN sed -i '/torch/d' /tmp/req-webui.txt
+RUN sed -i '/torch/d' /tmp/req-textgen/full/requirements.txt
 
 # --- 3. Create Python virtual environments ---
-RUN python3 -m venv /opt/venv-webui && \
-    python3 -m venv /opt/venv-comfyui && \
-    python3 -m venv /opt/venv-textgen
+RUN python3 -m venv --system-site-packages /opt/venv-webui && \
+    python3 -m venv --system-site-packages /opt/venv-textgen
 
 # --- 4. Install dependencies into isolated environments ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
-    /opt/venv-webui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    /opt/venv-comfyui/bin/python3 -m pip install --upgrade pip wheel setuptools && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-comfyui.txt && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir --force-reinstall --no-build-isolation flash-attn GitPython
-
-RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
-    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /tmp/req-textgen/full/requirements.txt && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
-COPY --from=comfyui-assets /opt/ComfyUI /opt/ComfyUI
 COPY --from=text-generation-webui-assets /opt/text-generation-webui /opt/text-generation-webui
 
 # --- 6. Install Text-Gen-WebUI Extensions ---
@@ -97,25 +90,8 @@ RUN git clone --depth=1 https://github.com/mamei16/LLM_Web_search.git /opt/text-
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
-# --- 7. Install ComfyUI Custom Nodes ---
-RUN cd /opt/ComfyUI/custom_nodes && \
-    git clone https://github.com/ltdrdata/was-node-suite-comfyui.git && \
-    cd was-node-suite-comfyui && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
-RUN cd /opt/ComfyUI/custom_nodes && \
-    git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
-    cd ComfyUI-Manager && \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir -r requirements.txt
-
-# --- FIX: Pre-install dependencies for Impact Pack and other common nodes ---
-RUN --mount=type=cache,target=/root/.cache/pip \
-    /opt/venv-comfyui/bin/python3 -m pip install --no-cache-dir \
-    ultralytics piexif dill \
-    'git+https://github.com/facebookresearch/segment-anything.git' \
-    'git+https://github.com/facebookresearch/sam2'
-
 # --- 8. Remove VCS metadata to trim image ---
-RUN rm -rf /app/.git /opt/ComfyUI/.git /opt/text-generation-webui/.git
+RUN rm -rf /app/.git /opt/text-generation-webui/.git
 
 # --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
@@ -129,16 +105,14 @@ FROM nvidia/cuda:12.8.1-base-ubuntu22.04
 
 LABEL org.opencontainers.image.title="Mixed-LLM Stack" \
       org.opencontainers.image.version="1.0" \
-      org.opencontainers.image.description="A container running Open WebUI, ComfyUI, and Text-Generation-WebUI."
+      org.opencontainers.image.description="A container running Open WebUI and Text-Generation-WebUI."
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV OLLAMA_MODELS=/workspace/ollama
-ENV COMFYUI_MODELS_DIR=/workspace/comfyui
 ENV OPENWEBUI_DATA_DIR=/workspace/open-webui
 ENV TEXTGEN_DATA_DIR=/workspace/text-generation-webui
 ENV TEXTGEN_MODELS_DIR=${TEXTGEN_DATA_DIR}/models
-ENV COMFYUI_URL="http://127.0.0.1:8188"
 ENV OLLAMA_BASE_URL="http://127.0.0.1:11434"
 
 # --- 1. Install Runtime System Dependencies ---
@@ -156,10 +130,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
 
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
-COPY --from=builder /opt/venv-comfyui /opt/venv-comfyui
 COPY --from=builder /opt/venv-textgen /opt/venv-textgen
 COPY --from=builder /app /app
-COPY --from=builder /opt/ComfyUI /opt/ComfyUI
 COPY --from=builder /opt/text-generation-webui /opt/text-generation-webui
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/bin/gguf-split
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/libllama.so* /usr/local/lib/
@@ -176,8 +148,6 @@ COPY entrypoint.sh /entrypoint.sh
 COPY sync_models.sh /sync_models.sh
 COPY idle_shutdown.sh /idle_shutdown.sh
 COPY start_textgenui.sh /start_textgenui.sh
-COPY start_comfyui.sh /start_comfyui.sh
-COPY extra_model_paths.yaml /etc/comfyui_model_paths.yaml
 COPY download_and_join.sh /download_and_join.sh
 COPY create_modelfile.sh /create_modelfile.sh
 COPY on_demand_model_loader.sh /on_demand_model_loader.sh
@@ -191,7 +161,6 @@ RUN chmod +x \
     /sync_models.sh \
     /idle_shutdown.sh \
     /start_textgenui.sh \
-    /start_comfyui.sh \
     /download_and_join.sh \
     /create_modelfile.sh \
     /on_demand_model_loader.sh \
@@ -201,5 +170,5 @@ RUN chmod +x \
 
 
 # --- 5. Expose ports and set entrypoint ---
-EXPOSE 8080 8188 7860
+EXPOSE 8080 7860
 ENTRYPOINT ["/entrypoint.sh"]
