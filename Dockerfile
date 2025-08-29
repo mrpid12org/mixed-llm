@@ -90,6 +90,7 @@ RUN git clone --depth=1 https://github.com/mamei16/LLM_Web_search.git /opt/text-
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
+
 # --- 8. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/text-generation-webui/.git
 
