@@ -36,7 +36,7 @@ ln -s "${COMFYUI_VENV_PERSIST}" "${COMFYUI_VENV_PATH}"
 COMFYUI_PIP="${COMFYUI_VENV_PATH}/bin/pip"
 if ! "${COMFYUI_PIP}" show sam2 > /dev/null 2>&1; then
     echo "--- Installing Impact Pack dependencies into ComfyUI venv ---"
-    "${COMFYUI_PIP}" install --no-cache-dir \
+    "${COMFYUI_PIP}" install --no-cache-dir --no-build-isolation \
         ultralytics piexif dill \
         'git+https://github.com/facebookresearch/segment-anything.git' \
         'git+https://github.com/facebookresearch/sam2'
