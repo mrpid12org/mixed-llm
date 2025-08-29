@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v9.0-slim-build
-# ComfyUI removed; only Open WebUI and Text-Generation-WebUI included
+# v9.1-slim-build-fix
+# Corrected PyTorch/pip installation for Ubuntu base image
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -56,9 +56,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# --- Install shared PyTorch globally ---
+# --- Install shared PyTorch globally (FIXED: installing pip with apt first) ---
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python3 -m ensurepip && \
+    apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # --- 2. Prepare dependency files ---
