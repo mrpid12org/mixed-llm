@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v9.1-slim-build-fix
-# Corrected PyTorch/pip installation for Ubuntu base image
+# v9.2-slim-build-debug
+# Corrected PyTorch/pip installation for Ubuntu base image with added debugging
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -12,9 +12,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     apt-get update && apt-get install -y --no-install-recommends \
     git build-essential cmake libcurl4-openssl-dev && \
     rm -rf /var/lib/apt/lists/*
+RUN echo "--- Disk & Memory after installing build dependencies ---" && df -h && free -h
 RUN git clone --depth=1 https://github.com/ggerganov/llama.cpp.git
 WORKDIR /llama.cpp
 RUN mkdir build && cd build && cmake .. -DLLAMA_CURL=OFF && make -j"$(nproc)" llama-gguf-split
+RUN echo "--- Disk & Memory after building llama-cpp ---" && df -h && free -h
 
 FROM alpine/git:2.49.1 AS openwebui-assets
 RUN apk add --no-cache curl
@@ -38,6 +40,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm install @tiptap/suggestion lowlight y-protocols --legacy-peer-deps
 COPY --from=openwebui-assets /app /app
 RUN npm run build && rm -rf node_modules
+RUN echo "--- Disk & Memory after building webui assets ---" && df -h && free -h
 
 # =====================================================================================
 # STAGE 3: Python Builder with Isolated Environments
@@ -55,11 +58,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-venv \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN echo "--- Disk & Memory after installing python build dependencies ---" && df -h && free -h
 
-# --- Install shared PyTorch globally (FIXED: installing pip with apt first) ---
+# --- Install shared PyTorch globally ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+RUN echo "--- Disk & Memory after installing PyTorch ---" && df -h && free -h
 
 # --- 2. Prepare dependency files ---
 COPY --from=webui-builder /app/backend/requirements.txt /tmp/req-webui.txt
@@ -70,16 +75,19 @@ RUN sed -i '/torch/d' /tmp/req-textgen/full/requirements.txt
 # --- 3. Create Python virtual environments ---
 RUN python3 -m venv --system-site-packages /opt/venv-webui && \
     python3 -m venv --system-site-packages /opt/venv-textgen
+RUN echo "--- Disk & Memory after creating venvs ---" && df -h && free -h
 
 # --- 4. Install dependencies into isolated environments ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
+RUN echo "--- Disk & Memory after installing webui dependencies ---" && df -h && free -h
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /tmp/req-textgen/full/requirements.txt && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers
+RUN echo "--- Disk & Memory after installing textgen dependencies ---" && df -h && free -h
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
@@ -89,15 +97,17 @@ COPY --from=text-generation-webui-assets /opt/text-generation-webui /opt/text-ge
 RUN git clone --depth=1 https://github.com/mamei16/LLM_Web_search.git /opt/text-generation-webui/extensions/LLM_Web_search
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
-
+RUN echo "--- Disk & Memory after installing textgen extension ---" && df -h && free -h
 
 # --- 7. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/text-generation-webui/.git
+RUN echo "--- Disk & Memory after removing git metadata ---" && df -h && free -h
 
 # --- Clean up the builder stage to reduce cache size ---
 RUN apt-get purge -y --auto-remove build-essential cmake python${PYTHON_VERSION}-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+RUN echo "--- Disk & Memory after builder cleanup ---" && df -h && free -h
 
 # =====================================================================================
 # STAGE 4: The Final Image
@@ -122,12 +132,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     curl supervisor ffmpeg libgomp1 python3.11 nano aria2 rsync git git-lfs iproute2 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN echo "--- Disk & Memory after installing runtime dependencies ---" && df -h && free -h
 
 # --- Install pip and the RunPod helper library for SSH functionality ---
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install runpod
+RUN echo "--- Disk & Memory after installing runpod ---" && df -h && free -h
 
 # --- 2. Copy ALL Built Assets from the 'builder' Stage ---
 COPY --from=builder /opt/venv-webui /opt/venv-webui
@@ -138,9 +150,11 @@ COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/b
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/libllama.so* /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 RUN ldconfig
+RUN echo "--- Disk & Memory after copying built assets ---" && df -h && free -h
 
 # --- 3. Install Ollama ---
 RUN curl -fsSL https://ollama.com/install.sh | sh
+RUN echo "--- Disk & Memory after installing Ollama ---" && df -h && free -h
 
 # --- 4. Copy Local Config Files and Scripts ---
 COPY supervisord.conf /etc/supervisor/conf.d/all-services.conf
@@ -168,6 +182,8 @@ RUN chmod +x \
     /join_gguf.sh \
     /download_and_join_multipart_gguf.sh
 
+# --- Log final image size before entrypoint ---
+RUN echo "--- FINAL IMAGE: Disk & Memory at end of build ---" && df -h && free -h
 
 # --- 5. Expose ports and set entrypoint ---
 EXPOSE 8080 7860
