@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v8.5-GGUF-Tools
+# v9.0-slim-build
 # ComfyUI removed; only Open WebUI and Text-Generation-WebUI included
 
 # =====================================================================================
@@ -91,7 +91,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /opt/text-generation-webui/extensions/LLM_Web_search/requirements.txt
 
 
-# --- 8. Remove VCS metadata to trim image ---
+# --- 7. Remove VCS metadata to trim image ---
 RUN rm -rf /app/.git /opt/text-generation-webui/.git
 
 # --- Clean up the builder stage to reduce cache size ---
@@ -138,7 +138,6 @@ COPY --from=llama-cpp-builder /llama.cpp/build/bin/llama-gguf-split /usr/local/b
 COPY --from=llama-cpp-builder /llama.cpp/build/bin/libllama.so* /usr/local/lib/
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 RUN ldconfig
-
 
 # --- 3. Install Ollama ---
 RUN curl -fsSL https://ollama.com/install.sh | sh
