@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v9.4-slim-build-final-fix
-# Corrects the fsspec dependency by explicitly installing gradio and gradio-client.
+# v9.5-slim-build-final-fix-v2
+# Fixes the fsspec dependency by combining all pip installs into a single step.
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -76,11 +76,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
 
-# --- FIX: Explicitly install gradio and gradio-client to ensure all sub-dependencies are met ---
+# --- FIX: Combined all pip installs into a single command for dependency resolution ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
-    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /tmp/req-textgen/full/requirements.txt && \
-    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir exllamav2==0.0.15 ctransformers gradio gradio_client fsspec
+    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /tmp/req-textgen/full/requirements.txt exllamav2==0.0.15 ctransformers gradio gradio_client fsspec
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
