@@ -76,10 +76,13 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
 
-# --- FIX: Combined all pip installs into a single command for dependency resolution ---
+# --- Install text-generation-webui dependencies and ensure fsspec is present ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
-    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir -r /tmp/req-textgen/full/requirements.txt exllamav2==0.0.15 ctransformers gradio gradio_client fsspec
+    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir \
+        -r /tmp/req-textgen/full/requirements.txt \
+        exllamav2==0.0.15 ctransformers gradio gradio_client && \
+    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir fsspec
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
