@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v9.5-slim-build-final-fix-v2
-# Fixes the fsspec dependency by combining all pip installs into a single step.
+# v9.9-slim-build-final-fix-v6
+# Consolidates all text-gen-webui pip installs into a single step for guaranteed dependency resolution.
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,t
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# --- Install shared PyTorch globally (FIXED: installing pip with apt first) ---
+# --- Install shared PyTorch globally ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
@@ -76,13 +76,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
 
-# --- Install text-generation-webui dependencies and ensure fsspec is present ---
+# --- FIX: Consolidate all pip installs for text-gen-webui into a single step ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir \
-        -r /tmp/req-textgen/full/requirements.txt \
-        exllamav2==0.0.15 ctransformers gradio gradio_client && \
-    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir fsspec
+    -r /tmp/req-textgen/full/requirements.txt \
+    exllamav2==0.0.15 \
+    ctransformers \
+    fsspec \
+    gradio \
+    gradio_client
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
