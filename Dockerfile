@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.4
 
 # --- BUILD VERSION IDENTIFIER ---
-# v9.9-slim-build-final-fix-v6
-# Consolidates all text-gen-webui pip installs into a single step for guaranteed dependency resolution.
+# v9.10-slim-build-final-fix-v7
+# Fixes the fsspec dependency by installing it as a separate, pre-requisite step for reliable dependency resolution.
 
 # =====================================================================================
 # STAGE 1: Asset Fetching & llama.cpp compilation
@@ -76,16 +76,16 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-webui/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-webui/bin/python3 -m pip install --no-cache-dir -r /tmp/req-webui.txt -U
 
-# --- FIX: Consolidate all pip installs for text-gen-webui into a single step ---
+# --- FIX: Install fsspec as a pre-requisite for proper dependency resolution ---
+RUN --mount=type=cache,target=/root/.cache/pip \
+    /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir fsspec
+
+# --- Install core requirements and other loaders ---
 RUN --mount=type=cache,target=/root/.cache/pip \
     /opt/venv-textgen/bin/python3 -m pip install --upgrade pip && \
     /opt/venv-textgen/bin/python3 -m pip install --no-cache-dir \
-    -r /tmp/req-textgen/full/requirements.txt \
-    exllamav2==0.0.15 \
-    ctransformers \
-    fsspec \
-    gradio \
-    gradio_client
+        -r /tmp/req-textgen/full/requirements.txt \
+        exllamav2==0.0.15 ctransformers
 
 # --- 5. Copy application source code ---
 COPY --from=webui-builder /app /app
